@@ -1,0 +1,117 @@
+import { useAuth } from "@/contexts/AuthContext";
+import { useProperty } from "@/contexts/PropertyContext";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign, Receipt } from "lucide-react";
+
+const Payments = () => {
+  const { user } = useAuth();
+  const { getTenantPayments, getPropertyById } = useProperty();
+  const payments = user ? getTenantPayments(user.uid) : [];
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Payment History</h1>
+            <p className="text-muted-foreground">View all your payment transactions</p>
+          </div>
+
+          {payments.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Receipt className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No payments yet</h3>
+                <p className="text-muted-foreground">Your payment history will appear here</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {payments.map((payment) => {
+                const booking = user?.uid;
+                return (
+                  <Card key={payment.id}>
+                    <CardContent className="flex items-center justify-between py-6">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <DollarSign className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold">Payment #{payment.id.slice(-8)}</p>
+                          <p className="text-sm text-muted-foreground">{formatDate(payment.date)}</p>
+                          {payment.razorpay_payment_id && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Razorpay ID: {payment.razorpay_payment_id}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">${payment.amount}</p>
+                        <Badge
+                          variant={
+                            payment.status === "completed"
+                              ? "default"
+                              : payment.status === "pending"
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className="mt-2"
+                        >
+                          {payment.status}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {payments.length > 0 && (
+            <Card className="mt-8">
+              <CardHeader>
+                <CardTitle>Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="text-center p-4 bg-secondary/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Total Payments</p>
+                    <p className="text-2xl font-bold">{payments.length}</p>
+                  </div>
+                  <div className="text-center p-4 bg-secondary/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
+                    <p className="text-2xl font-bold text-primary">
+                      ${payments.reduce((sum, p) => sum + p.amount, 0)}
+                    </p>
+                  </div>
+                  <div className="text-center p-4 bg-secondary/50 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-1">Completed</p>
+                    <p className="text-2xl font-bold text-accent">
+                      {payments.filter((p) => p.status === "completed").length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default Payments;

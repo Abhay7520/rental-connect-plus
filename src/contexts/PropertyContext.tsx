@@ -14,24 +14,65 @@ export interface Property {
   createdAt: string;
 }
 
+export interface Booking {
+  id: string;
+  tenant_id: string;
+  property_id: string;
+  start_date: string;
+  end_date: string;
+  status: "pending" | "confirmed" | "cancelled";
+  createdAt: string;
+}
+
+export interface Payment {
+  id: string;
+  booking_id: string;
+  tenant_id: string;
+  amount: number;
+  date: string;
+  status: "completed" | "failed" | "pending";
+  razorpay_payment_id?: string;
+}
+
 interface PropertyContextType {
   properties: Property[];
+  bookings: Booking[];
+  payments: Payment[];
   addProperty: (property: Omit<Property, "id" | "owner_id" | "createdAt">) => void;
   updateProperty: (id: string, property: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
   getOwnerProperties: (ownerId: string) => Property[];
+  getActiveProperties: () => Property[];
+  getPropertyById: (id: string) => Property | undefined;
+  addBooking: (booking: Omit<Booking, "id" | "createdAt">) => string;
+  updateBooking: (id: string, booking: Partial<Booking>) => void;
+  getTenantBookings: (tenantId: string) => Booking[];
+  addPayment: (payment: Omit<Payment, "id">) => void;
+  getTenantPayments: (tenantId: string) => Payment[];
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
 
 export const PropertyProvider = ({ children }: { children: ReactNode }) => {
   const [properties, setProperties] = useState<Property[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
     const stored = localStorage.getItem("renteazy_properties");
     if (stored) {
       setProperties(JSON.parse(stored));
+    }
+    
+    const storedBookings = localStorage.getItem("renteazy_bookings");
+    if (storedBookings) {
+      setBookings(JSON.parse(storedBookings));
+    }
+    
+    const storedPayments = localStorage.getItem("renteazy_payments");
+    if (storedPayments) {
+      setPayments(JSON.parse(storedPayments));
     }
   }, []);
 
@@ -69,9 +110,70 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
     return properties.filter((p) => p.owner_id === ownerId);
   };
 
+  const getActiveProperties = () => {
+    return properties.filter((p) => p.status === "active");
+  };
+
+  const getPropertyById = (id: string) => {
+    return properties.find((p) => p.id === id);
+  };
+
+  const addBooking = (booking: Omit<Booking, "id" | "createdAt">) => {
+    const newBooking: Booking = {
+      ...booking,
+      id: `booking_${Date.now()}`,
+      createdAt: new Date().toISOString(),
+    };
+    
+    const updated = [...bookings, newBooking];
+    localStorage.setItem("renteazy_bookings", JSON.stringify(updated));
+    setBookings(updated);
+    return newBooking.id;
+  };
+
+  const updateBooking = (id: string, updates: Partial<Booking>) => {
+    const updated = bookings.map((b) => (b.id === id ? { ...b, ...updates } : b));
+    localStorage.setItem("renteazy_bookings", JSON.stringify(updated));
+    setBookings(updated);
+  };
+
+  const getTenantBookings = (tenantId: string) => {
+    return bookings.filter((b) => b.tenant_id === tenantId);
+  };
+
+  const addPayment = (payment: Omit<Payment, "id">) => {
+    const newPayment: Payment = {
+      ...payment,
+      id: `payment_${Date.now()}`,
+    };
+    
+    const updated = [...payments, newPayment];
+    localStorage.setItem("renteazy_payments", JSON.stringify(updated));
+    setPayments(updated);
+  };
+
+  const getTenantPayments = (tenantId: string) => {
+    return payments.filter((p) => p.tenant_id === tenantId);
+  };
+
   return (
     <PropertyContext.Provider
-      value={{ properties, addProperty, updateProperty, deleteProperty, getOwnerProperties }}
+      value={{
+        properties,
+        bookings,
+        payments,
+        addProperty,
+        updateProperty,
+        deleteProperty,
+        getOwnerProperties,
+        getActiveProperties,
+        getPropertyById,
+        addBooking,
+        updateBooking,
+        getTenantBookings,
+        addPayment,
+        getTenantPayments,
+      }}
     >
       {children}
     </PropertyContext.Provider>

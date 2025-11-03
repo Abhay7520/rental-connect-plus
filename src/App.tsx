@@ -10,6 +10,10 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import TenantDashboard from "./pages/tenant/Dashboard";
+import Browse from "./pages/tenant/Browse";
+import PropertyDetails from "./pages/tenant/PropertyDetails";
+import Book from "./pages/tenant/Book";
+import Payments from "./pages/tenant/Payments";
 import OwnerDashboard from "./pages/owner/Dashboard";
 import AddProperty from "./pages/owner/AddProperty";
 import ManageProperties from "./pages/owner/ManageProperties";
@@ -35,6 +39,38 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={["tenant"]}>
                     <TenantDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tenant/browse"
+                element={
+                  <ProtectedRoute allowedRoles={["tenant"]}>
+                    <Browse />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tenant/property/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["tenant"]}>
+                    <PropertyDetails />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tenant/book/:id"
+                element={
+                  <ProtectedRoute allowedRoles={["tenant"]}>
+                    <Book />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/tenant/payments"
+                element={
+                  <ProtectedRoute allowedRoles={["tenant"]}>
+                    <Payments />
                   </ProtectedRoute>
                 }
               />
