@@ -34,10 +34,22 @@ export interface Payment {
   razorpay_payment_id?: string;
 }
 
+export interface Issue {
+  id: string;
+  tenant_id: string;
+  property_id: string;
+  title: string;
+  description: string;
+  attachments: string[];
+  status: "reported" | "investigating" | "resolved" | "closed";
+  created_at: string;
+}
+
 interface PropertyContextType {
   properties: Property[];
   bookings: Booking[];
   payments: Payment[];
+  issues: Issue[];
   addProperty: (property: Omit<Property, "id" | "owner_id" | "createdAt">) => void;
   updateProperty: (id: string, property: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
@@ -49,6 +61,10 @@ interface PropertyContextType {
   getTenantBookings: (tenantId: string) => Booking[];
   addPayment: (payment: Omit<Payment, "id">) => void;
   getTenantPayments: (tenantId: string) => Payment[];
+  addIssue: (issue: Omit<Issue, "id" | "created_at">) => void;
+  updateIssue: (id: string, issue: Partial<Issue>) => void;
+  getTenantIssues: (tenantId: string) => Issue[];
+  getOwnerIssues: (ownerId: string) => Issue[];
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -57,6 +73,7 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -73,6 +90,11 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
     const storedPayments = localStorage.getItem("renteazy_payments");
     if (storedPayments) {
       setPayments(JSON.parse(storedPayments));
+    }
+    
+    const storedIssues = localStorage.getItem("renteazy_issues");
+    if (storedIssues) {
+      setIssues(JSON.parse(storedIssues));
     }
   }, []);
 
@@ -156,12 +178,42 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
     return payments.filter((p) => p.tenant_id === tenantId);
   };
 
+  const addIssue = (issue: Omit<Issue, "id" | "created_at">) => {
+    const newIssue: Issue = {
+      ...issue,
+      id: `issue_${Date.now()}`,
+      created_at: new Date().toISOString(),
+    };
+    
+    const updated = [...issues, newIssue];
+    localStorage.setItem("renteazy_issues", JSON.stringify(updated));
+    setIssues(updated);
+  };
+
+  const updateIssue = (id: string, updates: Partial<Issue>) => {
+    const updated = issues.map((i) => (i.id === id ? { ...i, ...updates } : i));
+    localStorage.setItem("renteazy_issues", JSON.stringify(updated));
+    setIssues(updated);
+  };
+
+  const getTenantIssues = (tenantId: string) => {
+    return issues.filter((i) => i.tenant_id === tenantId);
+  };
+
+  const getOwnerIssues = (ownerId: string) => {
+    const ownerPropertyIds = properties
+      .filter((p) => p.owner_id === ownerId)
+      .map((p) => p.id);
+    return issues.filter((i) => ownerPropertyIds.includes(i.property_id));
+  };
+
   return (
     <PropertyContext.Provider
       value={{
         properties,
         bookings,
         payments,
+        issues,
         addProperty,
         updateProperty,
         deleteProperty,
@@ -173,6 +225,10 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
         getTenantBookings,
         addPayment,
         getTenantPayments,
+        addIssue,
+        updateIssue,
+        getTenantIssues,
+        getOwnerIssues,
       }}
     >
       {children}
