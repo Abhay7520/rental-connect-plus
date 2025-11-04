@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { Home, LogOut, User } from "lucide-react";
+import { Home, LogOut, User, MessageCircle } from "lucide-react";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -22,6 +22,12 @@ const Navbar = () => {
           </Link>
 
           <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/chatbot">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Help
+              </Link>
+            </Button>
             {user ? (
               <>
                 <div className="flex items-center gap-2 text-sm">

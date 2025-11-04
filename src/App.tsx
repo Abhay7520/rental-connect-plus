@@ -9,6 +9,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Chatbot from "./pages/Chatbot";
 import TenantDashboard from "./pages/tenant/Dashboard";
 import Browse from "./pages/tenant/Browse";
 import PropertyDetails from "./pages/tenant/PropertyDetails";
@@ -38,9 +39,10 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/chatbot" element={<Chatbot />} />
               <Route
                 path="/tenant/dashboard"
                 element={
