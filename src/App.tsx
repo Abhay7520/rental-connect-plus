@@ -17,9 +17,12 @@ import Payments from "./pages/tenant/Payments";
 import TenantIssues from "./pages/tenant/Issues";
 import OwnerDashboard from "./pages/owner/Dashboard";
 import AddProperty from "./pages/owner/AddProperty";
-import ManageProperties from "./pages/owner/ManageProperties";
+import OwnerManageProperties from "./pages/owner/ManageProperties";
 import OwnerIssues from "./pages/owner/Issues";
 import AdminDashboard from "./pages/admin/Dashboard";
+import ManageUsers from "./pages/admin/ManageUsers";
+import AdminManageProperties from "./pages/admin/ManageProperties";
+import Reports from "./pages/admin/Reports";
 import Announcements from "./pages/Announcements";
 import PostAnnouncement from "./pages/owner/PostAnnouncement";
 import NotFound from "./pages/NotFound";
@@ -106,7 +109,7 @@ const App = () => (
                 path="/owner/manage-properties"
                 element={
                   <ProtectedRoute allowedRoles={["owner"]}>
-                    <ManageProperties />
+                    <OwnerManageProperties />
                   </ProtectedRoute>
                 }
               />
@@ -123,6 +126,30 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={["admin"]}>
                     <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/manage-users"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <ManageUsers />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/manage-properties"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminManageProperties />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <Reports />
                   </ProtectedRoute>
                 }
               />

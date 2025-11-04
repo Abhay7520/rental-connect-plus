@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-interface User {
+export interface User {
   uid: string;
   name: string;
   email: string;
@@ -16,6 +16,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   signup: (data: SignupData) => Promise<void>;
   logout: () => void;
+  getAllUsers: () => User[];
+  deleteUser: (uid: string) => void;
+  updateUserRole: (uid: string, role: User['role']) => void;
 }
 
 interface SignupData {
@@ -54,7 +57,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       createdAt: new Date().toISOString(),
     };
 
-    // Store user in localStorage and state
+    // Store all users
+    const users = JSON.parse(localStorage.getItem("renteazy_users") || "[]");
+    users.push(newUser);
+    localStorage.setItem("renteazy_users", JSON.stringify(users));
+
+    // Store current user
     localStorage.setItem("renteazy_user", JSON.stringify(newUser));
     setUser(newUser);
   };
@@ -77,8 +85,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+  const getAllUsers = (): User[] => {
+    return JSON.parse(localStorage.getItem("renteazy_users") || "[]");
+  };
+
+  const deleteUser = (uid: string) => {
+    const users = getAllUsers();
+    const updatedUsers = users.filter(u => u.uid !== uid);
+    localStorage.setItem("renteazy_users", JSON.stringify(updatedUsers));
+    
+    // If deleting current user, logout
+    if (user?.uid === uid) {
+      logout();
+    }
+  };
+
+  const updateUserRole = (uid: string, role: User['role']) => {
+    const users = getAllUsers();
+    const updatedUsers = users.map(u => 
+      u.uid === uid ? { ...u, role } : u
+    );
+    localStorage.setItem("renteazy_users", JSON.stringify(updatedUsers));
+    
+    // If updating current user, update state
+    if (user?.uid === uid) {
+      const updatedUser = { ...user, role };
+      localStorage.setItem("renteazy_user", JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      signup, 
+      logout,
+      getAllUsers,
+      deleteUser,
+      updateUserRole,
+    }}>
       {children}
     </AuthContext.Provider>
   );

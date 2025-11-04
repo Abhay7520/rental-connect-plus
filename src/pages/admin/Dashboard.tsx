@@ -1,17 +1,25 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useProperty } from "@/contexts/PropertyContext";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, Users, Building2, Activity } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Building2, Calendar, DollarSign } from "lucide-react";
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, getAllUsers } = useAuth();
+  const { properties, bookings, payments } = useProperty();
+  const navigate = useNavigate();
+
+  const allUsers = getAllUsers();
+  const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
 
   const stats = [
-    { label: "Total Users", value: "1,248", icon: Users, color: "text-primary" },
-    { label: "Properties", value: "156", icon: Building2, color: "text-primary" },
-    { label: "Active Sessions", value: "342", icon: Activity, color: "text-accent" },
-    { label: "System Health", value: "98%", icon: Shield, color: "text-primary" },
+    { label: "Total Users", value: allUsers.length, icon: Users, color: "text-primary" },
+    { label: "Active Properties", value: properties.filter(p => p.status === 'active').length, icon: Building2, color: "text-primary" },
+    { label: "Total Bookings", value: bookings.length, icon: Calendar, color: "text-accent" },
+    { label: "Total Payments", value: `₹${totalRevenue.toLocaleString()}`, icon: DollarSign, color: "text-primary" },
   ];
 
   return (
@@ -19,9 +27,22 @@ const AdminDashboard = () => {
       <Navbar />
       <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
-            <p className="text-muted-foreground">Welcome, {user?.name}! System overview and management</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
+              <p className="text-muted-foreground">Welcome, {user?.name}! System overview and management</p>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => navigate("/admin/manage-users")}>
+                Manage Users
+              </Button>
+              <Button onClick={() => navigate("/admin/manage-properties")} variant="outline">
+                Manage Properties
+              </Button>
+              <Button onClick={() => navigate("/admin/reports")} variant="outline">
+                View Reports
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-4 mb-8">
