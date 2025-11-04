@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { PropertyProvider } from "@/contexts/PropertyContext";
+import { CommunityProvider } from "@/contexts/CommunityContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -28,6 +29,9 @@ import AdminManageProperties from "./pages/admin/ManageProperties";
 import Reports from "./pages/admin/Reports";
 import Announcements from "./pages/Announcements";
 import PostAnnouncement from "./pages/owner/PostAnnouncement";
+import Polls from "./pages/community/Polls";
+import Chat from "./pages/community/Chat";
+import Events from "./pages/community/Events";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,9 +41,10 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <PropertyProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+          <CommunityProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
             <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
@@ -189,9 +194,34 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/community/polls"
+                element={
+                  <ProtectedRoute>
+                    <Polls />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/community/chat"
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/community/events"
+                element={
+                  <ProtectedRoute>
+                    <Events />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </CommunityProvider>
         </PropertyProvider>
       </AuthProvider>
     </TooltipProvider>

@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Home, CreditCard, FileText, Search, Calendar, DollarSign, Bell } from "lucide-react";
+import { Home, CreditCard, FileText, Search, Calendar, DollarSign, Bell, MessageCircle, Users } from "lucide-react";
 
 const TenantDashboard = () => {
   const { user } = useAuth();
@@ -109,7 +109,54 @@ const TenantDashboard = () => {
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold mb-4">Community Features</h2>
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/community/polls")}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Polls</p>
+                      <p className="text-sm text-muted-foreground">Vote on community decisions</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/community/chat")}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <MessageCircle className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Chat</p>
+                      <p className="text-sm text-muted-foreground">Connect with neighbors</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/community/events")}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-primary/10 rounded-lg">
+                      <Users className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Events</p>
+                      <p className="text-sm text-muted-foreground">Join meetups</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Recent Bookings</CardTitle>
