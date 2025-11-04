@@ -20,6 +20,8 @@ import AddProperty from "./pages/owner/AddProperty";
 import ManageProperties from "./pages/owner/ManageProperties";
 import OwnerIssues from "./pages/owner/Issues";
 import AdminDashboard from "./pages/admin/Dashboard";
+import Announcements from "./pages/Announcements";
+import PostAnnouncement from "./pages/owner/PostAnnouncement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -121,6 +123,22 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={["admin"]}>
                     <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/announcements"
+                element={
+                  <ProtectedRoute>
+                    <Announcements />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner/post-announcement"
+                element={
+                  <ProtectedRoute allowedRoles={["owner", "admin"]}>
+                    <PostAnnouncement />
                   </ProtectedRoute>
                 }
               />

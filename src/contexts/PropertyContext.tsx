@@ -45,11 +45,20 @@ export interface Issue {
   created_at: string;
 }
 
+export interface Announcement {
+  id: string;
+  posted_by: string;
+  message: string;
+  type: "festival" | "maintenance" | "event";
+  date: string;
+}
+
 interface PropertyContextType {
   properties: Property[];
   bookings: Booking[];
   payments: Payment[];
   issues: Issue[];
+  announcements: Announcement[];
   addProperty: (property: Omit<Property, "id" | "owner_id" | "createdAt">) => void;
   updateProperty: (id: string, property: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
@@ -65,6 +74,8 @@ interface PropertyContextType {
   updateIssue: (id: string, issue: Partial<Issue>) => void;
   getTenantIssues: (tenantId: string) => Issue[];
   getOwnerIssues: (ownerId: string) => Issue[];
+  addAnnouncement: (announcement: Omit<Announcement, "id" | "date">) => void;
+  getAnnouncements: () => Announcement[];
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -74,6 +85,7 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -95,6 +107,11 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
     const storedIssues = localStorage.getItem("renteazy_issues");
     if (storedIssues) {
       setIssues(JSON.parse(storedIssues));
+    }
+    
+    const storedAnnouncements = localStorage.getItem("renteazy_announcements");
+    if (storedAnnouncements) {
+      setAnnouncements(JSON.parse(storedAnnouncements));
     }
   }, []);
 
@@ -207,6 +224,24 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
     return issues.filter((i) => ownerPropertyIds.includes(i.property_id));
   };
 
+  const addAnnouncement = (announcement: Omit<Announcement, "id" | "date">) => {
+    const newAnnouncement: Announcement = {
+      ...announcement,
+      id: `announcement_${Date.now()}`,
+      date: new Date().toISOString(),
+    };
+    
+    const updated = [...announcements, newAnnouncement];
+    localStorage.setItem("renteazy_announcements", JSON.stringify(updated));
+    setAnnouncements(updated);
+  };
+
+  const getAnnouncements = () => {
+    return [...announcements].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  };
+
   return (
     <PropertyContext.Provider
       value={{
@@ -214,6 +249,7 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
         bookings,
         payments,
         issues,
+        announcements,
         addProperty,
         updateProperty,
         deleteProperty,
@@ -229,6 +265,8 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
         updateIssue,
         getTenantIssues,
         getOwnerIssues,
+        addAnnouncement,
+        getAnnouncements,
       }}
     >
       {children}
