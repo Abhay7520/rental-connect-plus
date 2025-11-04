@@ -16,10 +16,12 @@ import PropertyDetails from "./pages/tenant/PropertyDetails";
 import Book from "./pages/tenant/Book";
 import Payments from "./pages/tenant/Payments";
 import TenantIssues from "./pages/tenant/Issues";
+import TenantReminders from "./pages/tenant/Reminders";
 import OwnerDashboard from "./pages/owner/Dashboard";
 import AddProperty from "./pages/owner/AddProperty";
 import OwnerManageProperties from "./pages/owner/ManageProperties";
 import OwnerIssues from "./pages/owner/Issues";
+import OwnerReminders from "./pages/owner/Reminders";
 import AdminDashboard from "./pages/admin/Dashboard";
 import ManageUsers from "./pages/admin/ManageUsers";
 import AdminManageProperties from "./pages/admin/ManageProperties";
@@ -92,6 +94,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/tenant/reminders"
+                element={
+                  <ProtectedRoute allowedRoles={["tenant"]}>
+                    <TenantReminders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/owner/dashboard"
                 element={
                   <ProtectedRoute allowedRoles={["owner"]}>
@@ -120,6 +130,14 @@ const App = () => (
                 element={
                   <ProtectedRoute allowedRoles={["owner"]}>
                     <OwnerIssues />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/owner/reminders"
+                element={
+                  <ProtectedRoute allowedRoles={["owner"]}>
+                    <OwnerReminders />
                   </ProtectedRoute>
                 }
               />

@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Home, CreditCard, FileText, Search, Calendar, DollarSign } from "lucide-react";
+import { Home, CreditCard, FileText, Search, Calendar, DollarSign, Bell } from "lucide-react";
 
 const TenantDashboard = () => {
   const { user } = useAuth();
@@ -63,6 +63,50 @@ const TenantDashboard = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3 mb-6">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/tenant/browse")}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Search className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Browse Properties</p>
+                    <p className="text-sm text-muted-foreground">Find your next home</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/tenant/payments")}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <CreditCard className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Payment History</p>
+                    <p className="text-sm text-muted-foreground">View all payments</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/tenant/reminders")}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Bell className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Rent Reminders</p>
+                    <p className="text-sm text-muted-foreground">Check due dates</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">

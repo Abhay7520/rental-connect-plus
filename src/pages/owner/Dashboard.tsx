@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, DollarSign, Users, TrendingUp, Plus } from "lucide-react";
+import { Building2, DollarSign, Users, TrendingUp, Plus, Bell, FileText, MessageCircle } from "lucide-react";
 
 const OwnerDashboard = () => {
   const { user } = useAuth();
@@ -60,6 +60,64 @@ const OwnerDashboard = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-4 mb-6">
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/owner/manage-properties")}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Building2 className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Properties</p>
+                    <p className="text-sm text-muted-foreground">Manage listings</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/owner/reminders")}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <Bell className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Reminders</p>
+                    <p className="text-sm text-muted-foreground">Send rent alerts</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/owner/issues")}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Issues</p>
+                    <p className="text-sm text-muted-foreground">Track problems</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/owner/post-announcement")}>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <MessageCircle className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Announcements</p>
+                    <p className="text-sm text-muted-foreground">Post updates</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
