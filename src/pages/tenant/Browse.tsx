@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useProperty } from "@/contexts/PropertyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ const Browse = () => {
       <Navbar />
       <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8">
+          <BackButton />
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Browse Properties</h1>
             <p className="text-muted-foreground">Find your perfect rental home</p>

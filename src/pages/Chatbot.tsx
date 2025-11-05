@@ -6,6 +6,7 @@ import { Send, Bot, User } from 'lucide-react';
 import { useChatbot } from '@/hooks/useChatbot';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import BackButton from '@/components/BackButton';
 
 const Chatbot = () => {
   const [inputMessage, setInputMessage] = useState('');
@@ -38,6 +39,7 @@ const Chatbot = () => {
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
+          <BackButton />
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-foreground mb-2">RentEazy Assistant</h1>
             <p className="text-muted-foreground">

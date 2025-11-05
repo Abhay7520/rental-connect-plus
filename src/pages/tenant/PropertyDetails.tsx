@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useProperty } from "@/contexts/PropertyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,14 +38,7 @@ const PropertyDetails = () => {
       <Navbar />
       <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8 max-w-5xl">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/tenant/browse")}
-            className="mb-6"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Browse
-          </Button>
+          <BackButton />
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 space-y-6">

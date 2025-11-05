@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useProperty } from "@/contexts/PropertyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -69,14 +70,7 @@ const AddProperty = () => {
       <Navbar />
       <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8 max-w-3xl">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/owner/dashboard")}
-            className="mb-6"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
+          <BackButton />
 
           <Card>
             <CardHeader>

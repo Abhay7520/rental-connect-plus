@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProperty } from "@/contexts/PropertyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -169,14 +170,7 @@ const Book = () => {
       <Navbar />
       <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8 max-w-3xl">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/tenant/property/${property.id}`)}
-            className="mb-6"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Property
-          </Button>
+          <BackButton />
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">

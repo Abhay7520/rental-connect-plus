@@ -3,6 +3,7 @@ import { useProperty } from "@/contexts/PropertyContext";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,7 @@ const Reminders = () => {
       <Navbar />
       
       <main className="flex-1 container mx-auto px-4 py-8">
+        <BackButton />
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
             <Bell className="h-8 w-8" />

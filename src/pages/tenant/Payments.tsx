@@ -2,6 +2,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProperty } from "@/contexts/PropertyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Receipt } from "lucide-react";
@@ -24,6 +25,7 @@ const Payments = () => {
       <Navbar />
       <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8">
+          <BackButton />
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Payment History</h1>
             <p className="text-muted-foreground">View all your payment transactions</p>
