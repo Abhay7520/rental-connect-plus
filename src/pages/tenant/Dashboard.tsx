@@ -6,19 +6,20 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Home, CreditCard, FileText, Search, Calendar, DollarSign, Bell, MessageCircle, Users } from "lucide-react";
+import { Home, CreditCard, FileText, Search, Calendar, DollarSign, Bell, MessageCircle, Users, AlertCircle } from "lucide-react";
 
 const TenantDashboard = () => {
   const { user } = useAuth();
   const { getTenantBookings, getTenantPayments, getPropertyById } = useProperty();
   const navigate = useNavigate();
-  
+
   const bookings = user ? getTenantBookings(user.uid) : [];
   const payments = user ? getTenantPayments(user.uid) : [];
   const recentBookings = bookings.slice(0, 3);
-  const totalSpent = payments.reduce((sum, p) => sum + p.amount, 0);
-  
-  const formatDate = (dateString: string) => {
+  const totalSpent = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const confirmedBookings = bookings.filter(b => b.status === "confirmed");
+
+  const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -29,7 +30,7 @@ const TenantDashboard = () => {
   const stats = [
     { label: "Total Bookings", value: bookings.length.toString(), icon: Home, color: "text-primary" },
     { label: "Total Spent", value: `$${totalSpent}`, icon: CreditCard, color: "text-accent" },
-    { label: "Active Bookings", value: bookings.filter(b => b.status === "confirmed").length.toString(), icon: FileText, color: "text-primary" },
+    { label: "Active Bookings", value: confirmedBookings.length.toString(), icon: FileText, color: "text-primary" },
     { label: "Total Payments", value: payments.length.toString(), icon: DollarSign, color: "text-primary" },
   ];
 
@@ -65,8 +66,12 @@ const TenantDashboard = () => {
             ))}
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3 mb-6">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/tenant/browse")}>
+          {/* Quick Action Cards */}
+          <div className="grid gap-6 md:grid-cols-4 mb-6">
+            <Card 
+              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              onClick={() => navigate("/tenant/browse")}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-primary/10 rounded-lg">
@@ -80,7 +85,10 @@ const TenantDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/tenant/payments")}>
+            <Card 
+              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              onClick={() => navigate("/tenant/payments")}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-primary/10 rounded-lg">
@@ -94,7 +102,10 @@ const TenantDashboard = () => {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/tenant/reminders")}>
+            <Card 
+              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              onClick={() => navigate("/tenant/reminders")}
+            >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-primary/10 rounded-lg">
@@ -107,8 +118,27 @@ const TenantDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* ✅ NEW: Raise Issue Button */}
+            <Card 
+              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              onClick={() => navigate("/tenant/issues")}
+            >
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-primary/10 rounded-lg">
+                    <AlertCircle className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Raise Issue</p>
+                    <p className="text-sm text-muted-foreground">Report problems</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
+          {/* Community Features */}
           <div className="mt-6">
             <h2 className="text-xl font-semibold mb-4">Community Features</h2>
             <div className="grid gap-4 md:grid-cols-3">
@@ -156,6 +186,7 @@ const TenantDashboard = () => {
             </div>
           </div>
 
+          {/* Recent Bookings & Payment Summary */}
           <div className="grid gap-6 md:grid-cols-2 mt-6">
             <Card>
               <CardHeader>

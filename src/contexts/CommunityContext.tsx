@@ -229,8 +229,10 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
 
 export const useCommunity = () => {
   const context = useContext(CommunityContext);
-  if (context === undefined) {
-    throw new Error("useCommunity must be used within a CommunityProvider");
+  if (!context) {
+    throw new Error("useCommunity must be used within CommunityProvider");
   }
   return context;
 };
+
+export default CommunityProvider;

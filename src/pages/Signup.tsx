@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { Home } from "lucide-react";
+import { Home, Loader2 } from "lucide-react";
 
 const Signup = () => {
   const [formData, setFormData] = useState({
@@ -21,13 +21,21 @@ const Signup = () => {
     address: "",
   });
   const [loading, setLoading] = useState(false);
-  const { signup } = useAuth();
+  const { signup, user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // ✅ CRITICAL FIX: Check if user is already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      console.log("✅ User already logged in:", user.role);
+      navigate(`/${user.role}/dashboard`, { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.role) {
       toast({
         title: "Role required",
@@ -37,36 +45,64 @@ const Signup = () => {
       return;
     }
 
+    if (!formData.name || !formData.email || !formData.password) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
+      console.log("🔵 [Signup] Starting signup with email:", formData.email);
+      
+      // ✅ Call signup - this updates the auth context
       await signup(formData as any);
       
-      // Store in users array for login
-      const users = JSON.parse(localStorage.getItem("renteazy_users") || "[]");
-      users.push({
-        uid: `user_${Date.now()}`,
-        ...formData,
-        createdAt: new Date().toISOString(),
-      });
-      localStorage.setItem("renteazy_users", JSON.stringify(users));
+      console.log("✅ [Signup] Signup completed, user created in Firebase");
 
+      // ✅ FIX: Don't navigate here! Let the useEffect above handle it
+      // The useEffect will trigger when 'user' state changes from AuthContext
+      
       toast({
         title: "Account created!",
         description: "Redirecting to your dashboard...",
       });
-      
-      navigate(`/${formData.role}/dashboard`);
-    } catch (error) {
+
+    } catch (error: any) {
+      console.error("❌ [Signup] Signup error:", error);
       toast({
         title: "Signup failed",
-        description: "Something went wrong. Please try again.",
+        description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
+
+  // ✅ Show loading state while auth is checking
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // ✅ If already logged in, will redirect via useEffect above
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -94,6 +130,7 @@ const Signup = () => {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -105,6 +142,7 @@ const Signup = () => {
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -116,11 +154,16 @@ const Signup = () => {
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="role">I am a</Label>
-                <Select value={formData.role} onValueChange={(value: any) => setFormData({ ...formData, role: value })}>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value: any) => setFormData({ ...formData, role: value })}
+                  disabled={loading}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
@@ -139,6 +182,7 @@ const Signup = () => {
                   placeholder="+1 (555) 000-0000"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  disabled={loading}
                 />
               </div>
               <div className="space-y-2">
@@ -148,10 +192,18 @@ const Signup = () => {
                   placeholder="123 Main St, City, State"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  disabled={loading}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Creating account..." : "Sign Up"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Sign Up"
+                )}
               </Button>
             </form>
             <div className="mt-4 text-center text-sm">

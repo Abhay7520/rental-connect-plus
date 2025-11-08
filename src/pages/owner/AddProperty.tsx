@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { useProperty } from "@/contexts/PropertyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,13 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 
 const AddProperty = () => {
   const navigate = useNavigate();
-  const { addProperty } = useProperty();
+  const { user } = useAuth();
+  const { addProperty, loading: contextLoading } = useProperty();
   const { toast } = useToast();
-  
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -25,8 +27,9 @@ const AddProperty = () => {
     amenities: "",
     status: "active" as const,
   });
-  
+
   const [images, setImages] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -37,32 +40,55 @@ const AddProperty = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.title || !formData.rent_price || !formData.location) {
+
+    if (!user) {
       toast({
-        title: "Missing fields",
-        description: "Please fill in all required fields",
+        title: "Error",
+        description: "You must be logged in",
         variant: "destructive",
       });
       return;
     }
 
-    addProperty({
-      ...formData,
-      rent_price: parseFloat(formData.rent_price),
-      amenities: formData.amenities.split(",").map((a) => a.trim()).filter(Boolean),
-      images,
-      status: formData.status,
-    });
+    if (!formData.title || !formData.rent_price || !formData.location) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all required fields (Title, Rent Price, Location)",
+        variant: "destructive",
+      });
+      return;
+    }
 
-    toast({
-      title: "Property added!",
-      description: "Your property has been successfully listed",
-    });
+    setIsSubmitting(true);
+    try {
+      await addProperty({
+        title: formData.title,
+        description: formData.description,
+        rent_price: parseFloat(formData.rent_price),
+        location: formData.location,
+        amenities: formData.amenities.split(",").map((a) => a.trim()).filter(Boolean),
+        images: images,
+        status: formData.status,
+      });
 
-    navigate("/owner/manage-properties");
+      toast({
+        title: "Property added!",
+        description: "Your property has been successfully listed",
+      });
+
+      navigate("/owner/dashboard");
+    } catch (error) {
+      console.error("Error adding property:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add property. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -87,6 +113,7 @@ const AddProperty = () => {
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="e.g., Modern Downtown Apartment"
                     required
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -98,6 +125,7 @@ const AddProperty = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Describe your property..."
                     rows={4}
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -111,6 +139,7 @@ const AddProperty = () => {
                       onChange={(e) => setFormData({ ...formData, rent_price: e.target.value })}
                       placeholder="1500"
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -122,6 +151,7 @@ const AddProperty = () => {
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       placeholder="City, State"
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -133,6 +163,7 @@ const AddProperty = () => {
                     value={formData.amenities}
                     onChange={(e) => setFormData({ ...formData, amenities: e.target.value })}
                     placeholder="WiFi, Parking, Pool, Gym"
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -147,6 +178,7 @@ const AddProperty = () => {
                       multiple
                       onChange={handleImageUpload}
                       className="hidden"
+                      disabled={isSubmitting}
                     />
                     <Label htmlFor="images" className="cursor-pointer">
                       <span className="text-primary hover:underline">Upload images</span>
@@ -160,24 +192,44 @@ const AddProperty = () => {
                 {images.length > 0 && (
                   <div className="grid grid-cols-3 gap-4">
                     {images.map((img, idx) => (
-                      <img
-                        key={idx}
-                        src={img}
-                        alt={`Preview ${idx + 1}`}
-                        className="w-full h-24 object-cover rounded-lg"
-                      />
+                      <div key={idx} className="relative">
+                        <img
+                          src={img}
+                          alt={`Preview ${idx + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImages(images.filter((_, i) => i !== idx))}
+                          className="absolute top-1 right-1 bg-destructive text-white rounded-full p-1 hover:bg-destructive/80"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
 
                 <div className="flex gap-4 pt-4">
-                  <Button type="submit" className="flex-1">
-                    Add Property
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={isSubmitting || contextLoading}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      "Add Property"
+                    )}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => navigate("/owner/dashboard")}
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </Button>

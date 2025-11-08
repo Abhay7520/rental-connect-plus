@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -9,15 +8,20 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, UserCog } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const ManageUsers = () => {
   const { getAllUsers, deleteUser, updateUserRole, user: currentUser } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState(getAllUsers());
 
-  const handleDeleteUser = (uid: string) => {
-    deleteUser(uid);
+  useEffect(() => {
+    setUsers(getAllUsers());
+  }, [getAllUsers]); // If using live onSnapshot, this updates live!
+
+  const handleDeleteUser = async (uid) => {
+    await deleteUser(uid);
     setUsers(getAllUsers());
     toast({
       title: "Success",
@@ -25,8 +29,8 @@ const ManageUsers = () => {
     });
   };
 
-  const handleRoleChange = (uid: string, newRole: "tenant" | "owner" | "admin") => {
-    updateUserRole(uid, newRole);
+  const handleRoleChange = async (uid, newRole) => {
+    await updateUserRole(uid, newRole);
     setUsers(getAllUsers());
     toast({
       title: "Success",
@@ -34,7 +38,7 @@ const ManageUsers = () => {
     });
   };
 
-  const getRoleBadgeVariant = (role: string): "default" | "secondary" | "destructive" => {
+  const getRoleBadgeVariant = (role) => {
     switch (role) {
       case "admin":
         return "destructive";
@@ -55,7 +59,6 @@ const ManageUsers = () => {
           <h1 className="text-3xl font-bold mb-2">Manage Users</h1>
           <p className="text-muted-foreground">View and manage all system users</p>
         </div>
-
         <Card>
           <CardHeader>
             <CardTitle>All Users ({users.length})</CardTitle>
@@ -97,7 +100,7 @@ const ManageUsers = () => {
                         <div className="flex items-center justify-end gap-2">
                           <Select
                             value={user.role}
-                            onValueChange={(value: any) => handleRoleChange(user.uid, value)}
+                            onValueChange={(value) => handleRoleChange(user.uid, value)}
                             disabled={user.uid === currentUser?.uid}
                           >
                             <SelectTrigger className="w-[120px]">
@@ -109,7 +112,6 @@ const ManageUsers = () => {
                               <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
-
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button

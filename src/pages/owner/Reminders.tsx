@@ -1,265 +1,300 @@
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProperty } from "@/contexts/PropertyContext";
+import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BackButton from "@/components/BackButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Bell, MessageCircle } from "lucide-react";
+import { Bell, DollarSign, Calendar, User, Mail, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-// Mock reminder data structure
-interface ReminderData {
-  tenant_name: string;
-  tenant_phone: string;
-  property_name: string;
-  rent_amount: number;
-  due_date: string;
-  payment_status: "paid" | "due_soon" | "overdue";
-  booking_id: string;
-}
-
 const Reminders = () => {
-  const { user } = useAuth();
-  const { properties, bookings, payments, getOwnerProperties } = useProperty();
+  const { user, getAllUsers } = useAuth();
+  const { getOwnerBookings, getOwnerPayments, getPropertyById } = useProperty();
   const { toast } = useToast();
-  const [sendingReminder, setSendingReminder] = useState<string | null>(null);
-  const [sendingBulk, setSendingBulk] = useState(false);
+  const navigate = useNavigate();
 
-  // Generate reminder data from existing bookings and payments
-  const getReminders = (): ReminderData[] => {
-    if (!user) return [];
+  const ownerBookings = user ? getOwnerBookings(user.uid) : [];
+  const ownerPayments = user ? getOwnerPayments(user.uid) : [];
+  const allUsers = getAllUsers();
 
-    const ownerProperties = getOwnerProperties(user.uid);
-    const ownerPropertyIds = ownerProperties.map(p => p.id);
-    
-    // Get confirmed bookings for owner's properties
-    const ownerBookings = bookings.filter(
-      b => ownerPropertyIds.includes(b.property_id) && b.status === "confirmed"
-    );
-
-    return ownerBookings.map((booking) => {
-      const property = properties.find(p => p.id === booking.property_id);
-      const bookingPayments = payments.filter(p => p.booking_id === booking.id);
+  // Calculate overdue and pending payments
+  const now = new Date();
+  const paymentReminders = ownerPayments
+    .filter(p => p.status === "pending")
+    .map(payment => {
+      const booking = ownerBookings.find(b => b.id === payment.booking_id);
+      const property = booking ? getPropertyById(booking.property_id) : null;
+      const tenant = allUsers.find(u => u.uid === payment.tenant_id);
+      const paymentDate = new Date(payment.date);
+      const daysOverdue = Math.floor((now.getTime() - paymentDate.getTime()) / (1000 * 60 * 60 * 24));
       
-      // Calculate due date (for demo: end of current month)
-      const today = new Date();
-      const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 5);
-      
-      // Check payment status
-      const lastPayment = bookingPayments[bookingPayments.length - 1];
-      const daysToDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      
-      let payment_status: "paid" | "due_soon" | "overdue";
-      if (lastPayment && lastPayment.status === "completed" && 
-          new Date(lastPayment.date).getMonth() === today.getMonth()) {
-        payment_status = "paid";
-      } else if (daysToDue < 0) {
-        payment_status = "overdue";
-      } else if (daysToDue <= 3) {
-        payment_status = "due_soon";
-      } else {
-        payment_status = "paid"; // Default for future
-      }
-
       return {
-        tenant_name: `Tenant ${booking.tenant_id.slice(-4)}`,
-        tenant_phone: `+91 ${Math.floor(Math.random() * 9000000000 + 1000000000)}`,
-        property_name: property?.title || "Unknown Property",
-        rent_amount: property?.rent_price || 0,
-        due_date: dueDate.toISOString().split('T')[0],
-        payment_status,
-        booking_id: booking.id,
+        payment,
+        booking,
+        property,
+        tenant,
+        daysOverdue,
+        isOverdue: daysOverdue > 0,
       };
-    });
-  };
+    })
+    .sort((a, b) => b.daysOverdue - a.daysOverdue);
 
-  const reminders = getReminders();
+  const overdueReminders = paymentReminders.filter(r => r.isOverdue);
+  const upcomingReminders = paymentReminders.filter(r => !r.isOverdue);
 
-  // Placeholder function for sending WhatsApp reminder
-  const sendWhatsAppReminder = async (tenant_name: string, tenant_phone: string, reminder: ReminderData) => {
-    setSendingReminder(reminder.booking_id);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock WhatsApp message
-    const message = `Hi ${tenant_name}, this is a reminder that your rent of ₹${reminder.rent_amount} for ${reminder.property_name} is due on ${new Date(reminder.due_date).toLocaleDateString()}.`;
-    
-    console.log(`Sending WhatsApp to ${tenant_phone}: ${message}`);
-    
+  const sendReminder = (tenantEmail: string, tenantName: string, propertyTitle: string, amount: number) => {
+    // In a real app, this would send an email or SMS
     toast({
-      title: "✅ Reminder Sent",
-      description: `WhatsApp reminder sent to ${tenant_name}`,
+      title: "Reminder Sent!",
+      description: `Rent reminder sent to ${tenantName} for ${propertyTitle}`,
     });
     
-    setSendingReminder(null);
+    console.log(`
+      Sending reminder to: ${tenantEmail}
+      Dear ${tenantName},
+      
+      This is a friendly reminder that your rent payment of $${amount} for ${propertyTitle} is pending.
+      
+      Please make the payment at your earliest convenience.
+      
+      Thank you,
+      RentEazy Management
+    `);
   };
-
-  // Placeholder function for sending bulk reminders
-  const sendBulkReminders = async () => {
-    setSendingBulk(true);
-    
-    const dueReminders = reminders.filter(r => r.payment_status !== "paid");
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    console.log(`Sending ${dueReminders.length} bulk reminders`);
-    
-    toast({
-      title: "✅ Bulk Reminders Sent",
-      description: `${dueReminders.length} WhatsApp reminders sent successfully`,
-    });
-    
-    setSendingBulk(false);
-  };
-
-  const getStatusBadge = (status: "paid" | "due_soon" | "overdue") => {
-    const variants: Record<typeof status, { variant: "default" | "secondary" | "destructive", label: string }> = {
-      paid: { variant: "default", label: "Paid" },
-      due_soon: { variant: "secondary", label: "Due Soon" },
-      overdue: { variant: "destructive", label: "Overdue" },
-    };
-    
-    const config = variants[status];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const dueCount = reminders.filter(r => r.payment_status !== "paid").length;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <Navbar />
-      
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <BackButton />
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
-              <Bell className="h-8 w-8" />
-              Rent Reminders
-            </h1>
-            <p className="text-muted-foreground">
-              Manage and send rent payment reminders to your tenants
-            </p>
-          </div>
+      <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
+        <div className="container mx-auto px-4 py-8">
+          <BackButton />
           
-          {dueCount > 0 && (
-            <Button 
-              size="lg" 
-              onClick={sendBulkReminders}
-              disabled={sendingBulk}
-              className="mt-4 md:mt-0"
-            >
-              <MessageCircle className="mr-2 h-5 w-5" />
-              {sendingBulk ? "Sending..." : `Send All Due Reminders (${dueCount})`}
-            </Button>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">Rent Reminders</h1>
+            <p className="text-muted-foreground">Track and send payment reminders to tenants</p>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid gap-6 md:grid-cols-3 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Overdue Payments
+                </CardTitle>
+                <Bell className="h-4 w-4 text-destructive" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">{overdueReminders.length}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Pending Payments
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-accent">{upcomingReminders.length}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Pending Amount
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  ${paymentReminders.reduce((sum, r) => sum + r.payment.amount, 0).toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Overdue Payments */}
+          {overdueReminders.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-destructive flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Overdue Payments
+                </CardTitle>
+                <CardDescription>These payments are past their due date</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {overdueReminders.map((reminder) => (
+                    <div
+                      key={reminder.payment.id}
+                      className="flex items-start justify-between p-4 border border-destructive/20 rounded-lg bg-destructive/5"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold text-lg">{reminder.property?.title || "Unknown Property"}</h3>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                              <User className="h-3 w-3" />
+                              {reminder.tenant?.name || "Unknown Tenant"}
+                            </p>
+                          </div>
+                          <Badge variant="destructive">
+                            {reminder.daysOverdue} days overdue
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Amount Due</p>
+                            <p className="font-semibold text-lg">${reminder.payment.amount.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Due Date</p>
+                            <p className="font-medium">{new Date(reminder.payment.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        {reminder.tenant && (
+                          <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {reminder.tenant.email}
+                            </span>
+                            {reminder.tenant.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {reminder.tenant.phone}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="ml-4"
+                        onClick={() => 
+                          sendReminder(
+                            reminder.tenant?.email || "",
+                            reminder.tenant?.name || "Tenant",
+                            reminder.property?.title || "Property",
+                            reminder.payment.amount
+                          )
+                        }
+                      >
+                        <Bell className="mr-2 h-4 w-4" />
+                        Send Reminder
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Upcoming/Pending Payments */}
+          {upcomingReminders.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Pending Payments
+                </CardTitle>
+                <CardDescription>Payments not yet overdue</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {upcomingReminders.map((reminder) => (
+                    <div
+                      key={reminder.payment.id}
+                      className="flex items-start justify-between p-4 border rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="font-semibold">{reminder.property?.title || "Unknown Property"}</h3>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                              <User className="h-3 w-3" />
+                              {reminder.tenant?.name || "Unknown Tenant"}
+                            </p>
+                          </div>
+                          <Badge variant="secondary">
+                            Due in {Math.abs(reminder.daysOverdue)} days
+                          </Badge>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Amount Due</p>
+                            <p className="font-semibold text-lg">${reminder.payment.amount.toLocaleString()}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Due Date</p>
+                            <p className="font-medium">{new Date(reminder.payment.date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+
+                        {reminder.tenant && (
+                          <div className="mt-3 flex gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {reminder.tenant.email}
+                            </span>
+                            {reminder.tenant.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {reminder.tenant.phone}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-4"
+                        onClick={() => 
+                          sendReminder(
+                            reminder.tenant?.email || "",
+                            reminder.tenant?.name || "Tenant",
+                            reminder.property?.title || "Property",
+                            reminder.payment.amount
+                          )
+                        }
+                      >
+                        <Bell className="mr-2 h-4 w-4" />
+                        Send Reminder
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Empty State */}
+          {paymentReminders.length === 0 && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16">
+                <Bell className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Payment Reminders</h3>
+                <p className="text-muted-foreground mb-6">All payments are up to date!</p>
+                <Button onClick={() => navigate("/owner/dashboard")}>
+                  Back to Dashboard
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Tenant Payment Status</CardTitle>
-            <CardDescription>
-              Track rent payments and send reminders to tenants
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {reminders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No active bookings found</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tenant Name</TableHead>
-                      <TableHead>Property</TableHead>
-                      <TableHead>Rent Amount</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reminders.map((reminder) => (
-                      <TableRow key={reminder.booking_id}>
-                        <TableCell className="font-medium">
-                          {reminder.tenant_name}
-                        </TableCell>
-                        <TableCell>{reminder.property_name}</TableCell>
-                        <TableCell>₹{reminder.rent_amount.toLocaleString()}</TableCell>
-                        <TableCell>
-                          {new Date(reminder.due_date).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(reminder.payment_status)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {reminder.payment_status !== "paid" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => sendWhatsAppReminder(
-                                reminder.tenant_name,
-                                reminder.tenant_phone,
-                                reminder
-                              )}
-                              disabled={sendingReminder === reminder.booking_id}
-                            >
-                              <MessageCircle className="mr-2 h-4 w-4" />
-                              {sendingReminder === reminder.booking_id ? "Sending..." : "Send Reminder"}
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-green-600">
-                  {reminders.filter(r => r.payment_status === "paid").length}
-                </div>
-                <div className="text-sm text-muted-foreground">Paid This Month</div>
-              </div>
-              <div className="p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {reminders.filter(r => r.payment_status === "due_soon").length}
-                </div>
-                <div className="text-sm text-muted-foreground">Due in 3 Days</div>
-              </div>
-              <div className="p-4 border rounded-lg">
-                <div className="text-2xl font-bold text-red-600">
-                  {reminders.filter(r => r.payment_status === "overdue").length}
-                </div>
-                <div className="text-sm text-muted-foreground">Overdue</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </main>
-
       <Footer />
     </div>
   );

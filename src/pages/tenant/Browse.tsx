@@ -10,8 +10,13 @@ import { Building2, MapPin, DollarSign } from "lucide-react";
 
 const Browse = () => {
   const navigate = useNavigate();
-  const { getActiveProperties } = useProperty();
-  const properties = getActiveProperties();
+  const { properties } = useProperty();
+
+  // Filter only available properties
+  const activeProperties = properties.filter((p: any) =>
+  p.available === true || p.status === "active"
+);
+
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -24,7 +29,7 @@ const Browse = () => {
             <p className="text-muted-foreground">Find your perfect rental home</p>
           </div>
 
-          {properties.length === 0 ? (
+          {activeProperties.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <Building2 className="h-16 w-16 text-muted-foreground mb-4" />
@@ -34,10 +39,10 @@ const Browse = () => {
             </Card>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {properties.map((property) => (
+              {activeProperties.map((property: any) => (
                 <Card key={property.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="h-48 bg-secondary relative">
-                    {property.images.length > 0 ? (
+                    {property.images && property.images.length > 0 ? (
                       <img
                         src={property.images[0]}
                         alt={property.title}
@@ -70,9 +75,9 @@ const Browse = () => {
                       </p>
                     )}
 
-                    {property.amenities.length > 0 && (
+                    {property.amenities && property.amenities.length > 0 && (
                       <div className="flex flex-wrap gap-2">
-                        {property.amenities.slice(0, 3).map((amenity, idx) => (
+                        {property.amenities.slice(0, 3).map((amenity: string, idx: number) => (
                           <Badge key={idx} variant="outline" className="text-xs">
                             {amenity}
                           </Badge>

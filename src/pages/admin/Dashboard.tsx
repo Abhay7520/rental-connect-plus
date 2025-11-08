@@ -13,7 +13,11 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
 
   const allUsers = getAllUsers();
-  const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
+  const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const recentUsers = [...allUsers]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
 
   const stats = [
     { label: "Total Users", value: allUsers.length, icon: Users, color: "text-primary" },
@@ -33,9 +37,7 @@ const AdminDashboard = () => {
               <p className="text-muted-foreground">Welcome, {user?.name}! System overview and management</p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => navigate("/admin/manage-users")}>
-                Manage Users
-              </Button>
+              <Button onClick={() => navigate("/admin/manage-users")}>Manage Users</Button>
               <Button onClick={() => navigate("/admin/manage-properties")} variant="outline">
                 Manage Properties
               </Button>
@@ -65,35 +67,35 @@ const AdminDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Recent User Activity</CardTitle>
-                <CardDescription>Latest user registrations and activities</CardDescription>
+                <CardDescription>Latest users</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { name: "John Smith", action: "Registered as Tenant", time: "5 min ago" },
-                    { name: "Sarah Johnson", action: "Listed new property", time: "12 min ago" },
-                    { name: "Mike Wilson", action: "Paid rent", time: "1 hour ago" },
-                    { name: "Emma Davis", action: "Updated profile", time: "2 hours ago" },
-                  ].map((activity) => (
-                    <div key={activity.name} className="flex items-center justify-between pb-3 border-b last:border-0">
-                      <div className="flex items-start gap-3">
-                        <Users className="h-5 w-5 text-primary mt-0.5" />
-                        <div>
-                          <p className="font-medium">{activity.name}</p>
-                          <p className="text-sm text-muted-foreground">{activity.action}</p>
+                  {recentUsers.length === 0 ? (
+                    <span className="text-muted-foreground">No users yet.</span>
+                  ) : (
+                    recentUsers.map((u) => (
+                      <div key={u.uid} className="flex items-center justify-between pb-3 border-b last:border-0">
+                        <div className="flex items-start gap-3">
+                          <Users className="h-5 w-5 text-primary mt-0.5" />
+                          <div>
+                            <p className="font-medium">{u.name}</p>
+                            <p className="text-sm text-muted-foreground">Role: {u.role}</p>
+                          </div>
                         </div>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(u.createdAt).toLocaleDateString()} 
+                        </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">{activity.time}</span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle>System Metrics</CardTitle>
-                <CardDescription>Platform performance overview</CardDescription>
+                <CardDescription>Platform performance (static demo)</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">

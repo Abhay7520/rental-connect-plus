@@ -1,272 +1,305 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useAuth } from "./AuthContext";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { BookingService, IssueService, PropertyService, PaymentService } from "@/services/firebaseService";
 
-export interface Property {
-  id: string;
-  owner_id: string;
-  title: string;
-  description: string;
-  rent_price: number;
-  location: string;
-  amenities: string[];
-  images: string[];
-  status: "active" | "inactive";
-  createdAt: string;
-}
-
-export interface Booking {
+// Types
+interface Booking {
   id: string;
   tenant_id: string;
   property_id: string;
   start_date: string;
   end_date: string;
   status: "pending" | "confirmed" | "cancelled";
+  amount?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Issue {
+  id: string;
+  property_id: string;
+  tenant_id: string;
+  title: string;
+  description: string;
+  status: "reported" | "investigating" | "resolved" | "closed";
+  attachments?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface Property {
+  id: string;
+  owner_id: string;
+  title: string;
+  description?: string;
+  location: string;
+  rent_price: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  amenities?: string[];
+  images?: string[];
+  available: boolean;
+  status?: string;
   createdAt: string;
 }
 
-export interface Payment {
+interface Payment {
   id: string;
+  tenant_id: string;
   booking_id: string;
-  tenant_id: string;
   amount: number;
-  date: string;
-  status: "completed" | "failed" | "pending";
-  razorpay_payment_id?: string;
-}
-
-export interface Issue {
-  id: string;
-  tenant_id: string;
-  property_id: string;
-  title: string;
-  description: string;
-  attachments: string[];
-  status: "reported" | "investigating" | "resolved" | "closed";
+  status: "pending" | "completed" | "failed";
   created_at: string;
-}
-
-export interface Announcement {
-  id: string;
-  posted_by: string;
-  message: string;
-  type: "festival" | "maintenance" | "event";
-  date: string;
+  date?: string;
 }
 
 interface PropertyContextType {
+  // Properties
   properties: Property[];
-  bookings: Booking[];
-  payments: Payment[];
-  issues: Issue[];
-  announcements: Announcement[];
-  addProperty: (property: Omit<Property, "id" | "owner_id" | "createdAt">) => void;
-  updateProperty: (id: string, property: Partial<Property>) => void;
-  deleteProperty: (id: string) => void;
-  getOwnerProperties: (ownerId: string) => Property[];
-  getActiveProperties: () => Property[];
+  loading: boolean;
   getPropertyById: (id: string) => Property | undefined;
-  addBooking: (booking: Omit<Booking, "id" | "createdAt">) => string;
-  updateBooking: (id: string, booking: Partial<Booking>) => void;
+  getActiveProperties: () => Property[];
+  getOwnerProperties: (ownerId: string) => Property[];
+  addProperty: (data: any) => Promise<void>;
+  updateProperty: (id: string, data: any) => Promise<void>;
+  deleteProperty: (id: string) => Promise<void>;
+  
+  // Bookings
+  createBooking: (data: any) => Promise<Booking>;
+  updateBooking: (id: string, data: any) => Promise<void>;
   getTenantBookings: (tenantId: string) => Booking[];
-  addPayment: (payment: Omit<Payment, "id">) => void;
-  getTenantPayments: (tenantId: string) => Payment[];
-  addIssue: (issue: Omit<Issue, "id" | "created_at">) => void;
-  updateIssue: (id: string, issue: Partial<Issue>) => void;
+  getOwnerBookings: (ownerId: string) => Booking[];
+  
+  // Issues
+  addIssue: (data: any) => Promise<void>;
+  updateIssue: (id: string, data: any) => Promise<void>;
   getTenantIssues: (tenantId: string) => Issue[];
   getOwnerIssues: (ownerId: string) => Issue[];
-  addAnnouncement: (announcement: Omit<Announcement, "id" | "date">) => void;
-  getAnnouncements: () => Announcement[];
+  
+  // Payments
+  addPayment: (data: any) => Promise<void>;
+  getTenantPayments: (tenantId: string) => Payment[];
+  getOwnerPayments: (ownerId: string) => Payment[];
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
 
-export const PropertyProvider = ({ children }: { children: ReactNode }) => {
+export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const { user } = useAuth();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("renteazy_properties");
-    if (stored) {
-      setProperties(JSON.parse(stored));
-    }
-    
-    const storedBookings = localStorage.getItem("renteazy_bookings");
-    if (storedBookings) {
-      setBookings(JSON.parse(storedBookings));
-    }
-    
-    const storedPayments = localStorage.getItem("renteazy_payments");
-    if (storedPayments) {
-      setPayments(JSON.parse(storedPayments));
-    }
-    
-    const storedIssues = localStorage.getItem("renteazy_issues");
-    if (storedIssues) {
-      setIssues(JSON.parse(storedIssues));
-    }
-    
-    const storedAnnouncements = localStorage.getItem("renteazy_announcements");
-    if (storedAnnouncements) {
-      setAnnouncements(JSON.parse(storedAnnouncements));
-    }
-  }, []);
-
-  const saveToStorage = (props: Property[]) => {
-    localStorage.setItem("renteazy_properties", JSON.stringify(props));
-    setProperties(props);
-  };
-
-  const addProperty = (property: Omit<Property, "id" | "owner_id" | "createdAt">) => {
-    if (!user) return;
-    
-    const newProperty: Property = {
-      ...property,
-      id: `prop_${Date.now()}`,
-      owner_id: user.uid,
-      createdAt: new Date().toISOString(),
-    };
-
-    saveToStorage([...properties, newProperty]);
-  };
-
-  const updateProperty = (id: string, updates: Partial<Property>) => {
-    const updated = properties.map((p) =>
-      p.id === id ? { ...p, ...updates } : p
-    );
-    saveToStorage(updated);
-  };
-
-  const deleteProperty = (id: string) => {
-    const filtered = properties.filter((p) => p.id !== id);
-    saveToStorage(filtered);
-  };
-
-  const getOwnerProperties = (ownerId: string) => {
-    return properties.filter((p) => p.owner_id === ownerId);
+  // ============ PROPERTIES ============
+  const getPropertyById = (id: string) => {
+    return properties.find(p => p.id === id);
   };
 
   const getActiveProperties = () => {
-    return properties.filter((p) => p.status === "active");
+    return properties.filter(p => p.available === true);
   };
 
-  const getPropertyById = (id: string) => {
-    return properties.find((p) => p.id === id);
+  const getOwnerProperties = (ownerId: string) => {
+    return properties.filter(p => p.owner_id === ownerId);
   };
 
-  const addBooking = (booking: Omit<Booking, "id" | "createdAt">) => {
-    const newBooking: Booking = {
-      ...booking,
-      id: `booking_${Date.now()}`,
-      createdAt: new Date().toISOString(),
+  const addProperty = async (data: any) => {
+    try {
+      const newProperty = await PropertyService.create(data);
+      setProperties([...properties, newProperty as Property]);
+    } catch (error) {
+      console.error("Error adding property:", error);
+      throw error;
+    }
+  };
+
+  const updateProperty = async (id: string, data: any) => {
+    try {
+      await PropertyService.update(id, data);
+      setProperties(properties.map(p => p.id === id ? { ...p, ...data } : p));
+    } catch (error) {
+      console.error("Error updating property:", error);
+      throw error;
+    }
+  };
+
+  const deleteProperty = async (id: string) => {
+    try {
+      await PropertyService.delete(id);
+      setProperties(properties.filter(p => p.id !== id));
+    } catch (error) {
+      console.error("Error deleting property:", error);
+      throw error;
+    }
+  };
+
+  // ============ BOOKINGS ============
+  const createBooking = async (data: any) => {
+    try {
+      console.log("🔵 [PropertyContext] Creating booking:", data);
+      const booking = await BookingService.create({
+        tenant_id: data.tenant_id,
+        property_id: data.property_id,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        status: "pending",
+        amount: data.amount || 0,
+      });
+      setBookings([...bookings, booking as Booking]);
+      console.log("✅ [PropertyContext] Booking created:", booking.id);
+      return booking as Booking;
+    } catch (error) {
+      console.error("❌ [PropertyContext] Error creating booking:", error);
+      throw error;
+    }
+  };
+
+  const updateBooking = async (id: string, data: any) => {
+    try {
+      console.log("🔵 [PropertyContext] Updating booking:", id, data);
+      await BookingService.update(id, data);
+      setBookings(bookings.map(b => b.id === id ? { ...b, ...data } : b));
+      console.log("✅ [PropertyContext] Booking updated");
+    } catch (error) {
+      console.error("❌ [PropertyContext] Error updating booking:", error);
+      throw error;
+    }
+  };
+
+  const getTenantBookings = (tenantId: string): Booking[] => {
+    return bookings.filter(b => b.tenant_id === tenantId);
+  };
+
+  const getOwnerBookings = (ownerId: string): Booking[] => {
+    try {
+      const ownerProperties = properties.filter(p => p.owner_id === ownerId);
+      const propertyIds = ownerProperties.map(p => p.id);
+      return bookings.filter(b => propertyIds.includes(b.property_id));
+    } catch (error) {
+      console.error("❌ [PropertyContext] Error getting owner bookings:", error);
+      return [];
+    }
+  };
+
+  // ============ ISSUES ============
+  const addIssue = async (data: any) => {
+    try {
+      console.log("🔵 [PropertyContext] Creating issue:", data);
+      const issue = await IssueService.create(data);
+      setIssues([...issues, issue as Issue]);
+      console.log("✅ [PropertyContext] Issue created:", issue.id);
+    } catch (error) {
+      console.error("❌ [PropertyContext] Error creating issue:", error);
+      throw error;
+    }
+  };
+
+  const updateIssue = async (id: string, data: any) => {
+    try {
+      console.log("🔵 [PropertyContext] Updating issue:", id);
+      await IssueService.update(id, data);
+      setIssues(issues.map(i => i.id === id ? { ...i, ...data } : i));
+      console.log("✅ [PropertyContext] Issue updated");
+    } catch (error) {
+      console.error("❌ [PropertyContext] Error updating issue:", error);
+      throw error;
+    }
+  };
+
+  const getTenantIssues = (tenantId: string): Issue[] => {
+    return issues.filter(i => i.tenant_id === tenantId);
+  };
+
+  const getOwnerIssues = (ownerId: string): Issue[] => {
+    try {
+      const ownerProperties = properties.filter(p => p.owner_id === ownerId);
+      const propertyIds = ownerProperties.map(p => p.id);
+      return issues.filter(i => propertyIds.includes(i.property_id));
+    } catch (error) {
+      console.error("❌ [PropertyContext] Error getting owner issues:", error);
+      return [];
+    }
+  };
+
+  // ============ PAYMENTS ============
+  const addPayment = async (data: any) => {
+    try {
+      const payment = await PaymentService.create(data);
+      if (payment) {
+        setPayments([...payments, payment as Payment]);
+      }
+    } catch (error) {
+      console.error("Error adding payment:", error);
+      throw error;
+    }
+  };
+
+  const getTenantPayments = (tenantId: string): Payment[] => {
+    return payments.filter(p => p.tenant_id === tenantId);
+  };
+
+  const getOwnerPayments = (ownerId: string): Payment[] => {
+    try {
+      const ownerProperties = properties.filter(p => p.owner_id === ownerId);
+      const propertyIds = ownerProperties.map(p => p.id);
+      
+      const ownerBookings = bookings.filter(b => propertyIds.includes(b.property_id));
+      const bookingIds = ownerBookings.map(b => b.id);
+      
+      return payments.filter(p => bookingIds.includes(p.booking_id));
+    } catch (error) {
+      console.error("❌ [PropertyContext] Error getting owner payments:", error);
+      return [];
+    }
+  };
+
+  // Load initial data
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Load properties
+        const allProps = await PropertyService.getAll();
+        setProperties(allProps as Property[]);
+
+        // Subscribe to properties updates
+        PropertyService.onSnapshot(
+          (data) => setProperties(data as Property[]),
+          (error) => console.error("Error loading properties:", error)
+        );
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    const updated = [...bookings, newBooking];
-    localStorage.setItem("renteazy_bookings", JSON.stringify(updated));
-    setBookings(updated);
-    return newBooking.id;
-  };
 
-  const updateBooking = (id: string, updates: Partial<Booking>) => {
-    const updated = bookings.map((b) => (b.id === id ? { ...b, ...updates } : b));
-    localStorage.setItem("renteazy_bookings", JSON.stringify(updated));
-    setBookings(updated);
-  };
-
-  const getTenantBookings = (tenantId: string) => {
-    return bookings.filter((b) => b.tenant_id === tenantId);
-  };
-
-  const addPayment = (payment: Omit<Payment, "id">) => {
-    const newPayment: Payment = {
-      ...payment,
-      id: `payment_${Date.now()}`,
-    };
-    
-    const updated = [...payments, newPayment];
-    localStorage.setItem("renteazy_payments", JSON.stringify(updated));
-    setPayments(updated);
-  };
-
-  const getTenantPayments = (tenantId: string) => {
-    return payments.filter((p) => p.tenant_id === tenantId);
-  };
-
-  const addIssue = (issue: Omit<Issue, "id" | "created_at">) => {
-    const newIssue: Issue = {
-      ...issue,
-      id: `issue_${Date.now()}`,
-      created_at: new Date().toISOString(),
-    };
-    
-    const updated = [...issues, newIssue];
-    localStorage.setItem("renteazy_issues", JSON.stringify(updated));
-    setIssues(updated);
-  };
-
-  const updateIssue = (id: string, updates: Partial<Issue>) => {
-    const updated = issues.map((i) => (i.id === id ? { ...i, ...updates } : i));
-    localStorage.setItem("renteazy_issues", JSON.stringify(updated));
-    setIssues(updated);
-  };
-
-  const getTenantIssues = (tenantId: string) => {
-    return issues.filter((i) => i.tenant_id === tenantId);
-  };
-
-  const getOwnerIssues = (ownerId: string) => {
-    const ownerPropertyIds = properties
-      .filter((p) => p.owner_id === ownerId)
-      .map((p) => p.id);
-    return issues.filter((i) => ownerPropertyIds.includes(i.property_id));
-  };
-
-  const addAnnouncement = (announcement: Omit<Announcement, "id" | "date">) => {
-    const newAnnouncement: Announcement = {
-      ...announcement,
-      id: `announcement_${Date.now()}`,
-      date: new Date().toISOString(),
-    };
-    
-    const updated = [...announcements, newAnnouncement];
-    localStorage.setItem("renteazy_announcements", JSON.stringify(updated));
-    setAnnouncements(updated);
-  };
-
-  const getAnnouncements = () => {
-    return [...announcements].sort((a, b) => 
-      new Date(b.date).getTime() - new Date(a.date).getTime()
-    );
-  };
+    loadData();
+  }, []);
 
   return (
     <PropertyContext.Provider
       value={{
         properties,
-        bookings,
-        payments,
-        issues,
-        announcements,
+        loading,
+        getPropertyById,
+        getActiveProperties,
+        getOwnerProperties,
         addProperty,
         updateProperty,
         deleteProperty,
-        getOwnerProperties,
-        getActiveProperties,
-        getPropertyById,
-        addBooking,
+        createBooking,
         updateBooking,
         getTenantBookings,
-        addPayment,
-        getTenantPayments,
+        getOwnerBookings,
         addIssue,
         updateIssue,
         getTenantIssues,
         getOwnerIssues,
-        addAnnouncement,
-        getAnnouncements,
+        addPayment,
+        getTenantPayments,
+        getOwnerPayments,
       }}
     >
       {children}
@@ -276,8 +309,10 @@ export const PropertyProvider = ({ children }: { children: ReactNode }) => {
 
 export const useProperty = () => {
   const context = useContext(PropertyContext);
-  if (context === undefined) {
-    throw new Error("useProperty must be used within a PropertyProvider");
+  if (!context) {
+    throw new Error("useProperty must be used within PropertyProvider");
   }
   return context;
 };
+
+export default PropertyProvider;
