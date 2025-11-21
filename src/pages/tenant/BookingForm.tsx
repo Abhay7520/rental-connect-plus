@@ -9,20 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, DollarSign, Loader2 } from "lucide-react";
+import { Calendar, DollarSign, Loader2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
 
 const BookingForm = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getPropertyById, createBooking, addPayment } = useProperty();
+  const { getPropertyById, createBooking, addPayment, updateBooking } = useProperty();
   const { toast } = useToast();
   
   const property = id ? getPropertyById(id) : null;
@@ -56,16 +50,6 @@ const BookingForm = () => {
     return property.rent_price * months;
   };
 
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
   const handlePayment = async () => {
     if (!user || !startDate || !endDate) {
       toast({
@@ -89,18 +73,6 @@ const BookingForm = () => {
     setIsProcessing(true);
 
     try {
-      // Load Razorpay script
-      const res = await loadRazorpayScript();
-      if (!res) {
-        toast({
-          title: "Error",
-          description: "Razorpay SDK failed to load. Check your internet connection.",
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return;
-      }
-
       // Create booking first
       const booking = await createBooking({
         property_id: property.id,
@@ -110,68 +82,36 @@ const BookingForm = () => {
         status: "pending",
       });
 
-      // Initialize Razorpay payment
-      const options = {
-        key: "rzp_test_YOUR_KEY_ID", // Replace with your Razorpay key
-        amount: total * 100, // Amount in paise
-        currency: "USD",
-        name: "RentEazy",
-        description: `Booking for ${property.title}`,
-        image: "/placeholder.svg",
-        handler: async function (response: any) {
-          try {
-            // Payment successful - create payment record
-            await addPayment({
-              booking_id: booking.id,
-              tenant_id: user.uid,
-              amount: total,
-              status: "completed",
-              razorpay_payment_id: response.razorpay_payment_id,
-            });
+      // DEMO MODE: Simulate payment processing
+      // In production, replace this with actual Razorpay integration
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-            toast({
-              title: "Payment Successful!",
-              description: "Your booking has been confirmed",
-            });
+      // Create payment record
+      await addPayment({
+        booking_id: booking.id,
+        tenant_id: user.uid,
+        amount: total,
+        status: "completed",
+        razorpay_payment_id: `demo_${Date.now()}`,
+      });
 
-            navigate("/tenant/bookings");
-          } catch (error) {
-            console.error("Error recording payment:", error);
-            toast({
-              title: "Error",
-              description: "Payment received but failed to record. Contact support.",
-              variant: "destructive",
-            });
-          }
-        },
-        prefill: {
-          name: user.name,
-          email: user.email,
-        },
-        theme: {
-          color: "#3b82f6",
-        },
-        modal: {
-          ondismiss: function() {
-            setIsProcessing(false);
-            toast({
-              title: "Payment Cancelled",
-              description: "You can try again when ready",
-            });
-          }
-        }
-      };
+      // Update booking status to confirmed
+      await updateBooking(booking.id, { status: "confirmed" });
 
-      const paymentObject = new window.Razorpay(options);
-      paymentObject.open();
-      setIsProcessing(false);
+      toast({
+        title: "Payment Successful!",
+        description: `Booking confirmed for ${property.title}`,
+      });
+
+      navigate("/tenant/bookings");
     } catch (error) {
       console.error("Payment error:", error);
       toast({
-        title: "Error",
+        title: "Payment Failed",
         description: "Failed to process payment. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setIsProcessing(false);
     }
   };
@@ -264,18 +204,24 @@ const BookingForm = () => {
                 {isProcessing ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processing...
+                    Processing Payment...
                   </>
                 ) : (
                   <>
-                    <DollarSign className="mr-2 h-5 w-5" />
-                    Pay ${total} with Razorpay
+                    <CreditCard className="mr-2 h-5 w-5" />
+                    Confirm Booking & Pay ${total}
                   </>
                 )}
               </Button>
 
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-xs text-blue-800 dark:text-blue-200 text-center">
+                  💡 <strong>Demo Mode:</strong> This is a test payment. No real transaction will occur.
+                </p>
+              </div>
+
               <p className="text-xs text-muted-foreground text-center">
-                By proceeding, you agree to our terms and conditions. Payment is processed securely through Razorpay.
+                By proceeding, you agree to our terms and conditions.
               </p>
             </CardContent>
           </Card>
