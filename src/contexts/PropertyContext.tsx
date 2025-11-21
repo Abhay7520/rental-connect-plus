@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { BookingService, IssueService, PropertyService, PaymentService } from "@/services/firebaseService";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Types
 interface Booking {
@@ -102,6 +103,7 @@ interface PropertyContextType {
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
 
 export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -307,12 +309,24 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Load initial data with real-time sync
+  // Load initial data with real-time sync - reload when user changes
   useEffect(() => {
+    // Clear data when no user (logged out)
+    if (!user) {
+      console.log("🔵 User logged out, clearing data...");
+      setProperties([]);
+      setBookings([]);
+      setIssues([]);
+      setPayments([]);
+      setAnnouncements([]);
+      setLoading(false);
+      return;
+    }
+
     const loadData = async () => {
       setLoading(true);
       try {
-        console.log("🔵 Loading all data with real-time sync...");
+        console.log("🔵 Loading all data with real-time sync for user:", user.email);
         
         // Load properties with real-time listener
         const allProps = await PropertyService.getAll();
@@ -367,7 +381,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     loadData();
-  }, []);
+  }, [user]); // Reload data when user changes (login/logout)
 
   return (
     <PropertyContext.Provider

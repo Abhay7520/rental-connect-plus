@@ -2,15 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useChatbot } from '@/hooks/useChatbot';
+import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import BackButton from '@/components/BackButton';
 
 const Chatbot = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [inputMessage, setInputMessage] = useState('');
-  const { messages, sendMessage, isTyping } = useChatbot();
+  const { messages, sendMessage, isTyping } = useChatbot(user?.role);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -69,6 +73,17 @@ const Chatbot = () => {
                     }`}
                   >
                     <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                    {message.action && (
+                      <Button
+                        onClick={() => navigate(message.action!.path)}
+                        size="sm"
+                        variant="outline"
+                        className="mt-3 w-full bg-background hover:bg-background/80"
+                      >
+                        {message.action.label}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    )}
                     <span className="text-xs opacity-70 mt-1 block">
                       {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
