@@ -2,46 +2,50 @@ import { Home } from "lucide-react";
 
 const Footer = () => {
   return (
-    <footer className="border-t bg-card mt-auto">
-      <div className="container mx-auto px-4 py-8">
+    <footer className="border-t bg-gradient-to-b from-background to-secondary/20 mt-auto">
+      <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <Home className="h-5 w-5 text-primary" />
-              <span className="text-lg font-bold text-primary">RentEazy</span>
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Home className="h-5 w-5 text-primary" />
+              </div>
+              <span className="text-lg font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+                RentEazy
+              </span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground leading-relaxed">
               Simplifying rental and community management for everyone.
             </p>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-3">For Tenants</h3>
+            <h3 className="font-semibold mb-4 text-foreground">For Tenants</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>Find Properties</li>
-              <li>Pay Rent</li>
-              <li>Maintenance Requests</li>
-              <li>Community Forum</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Find Properties</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Pay Rent</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Maintenance Requests</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Community Forum</li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-3">For Owners</h3>
+            <h3 className="font-semibold mb-4 text-foreground">For Owners</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>List Properties</li>
-              <li>Track Payments</li>
-              <li>Manage Tenants</li>
-              <li>Analytics</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">List Properties</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Track Payments</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Manage Tenants</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Analytics</li>
             </ul>
           </div>
 
           <div>
-            <h3 className="font-semibold mb-3">Company</h3>
+            <h3 className="font-semibold mb-4 text-foreground">Company</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>About Us</li>
-              <li>Contact</li>
-              <li>Privacy Policy</li>
-              <li>Terms of Service</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">About Us</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Contact</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Privacy Policy</li>
+              <li className="hover:text-primary transition-colors cursor-pointer">Terms of Service</li>
             </ul>
           </div>
         </div>
