@@ -41,7 +41,7 @@ const ManageProperties = () => {
     }
   };
 
-  const toggleStatus = (id: string, currentStatus: "active" | "inactive") => {
+  const toggleStatus = (id: string, currentStatus?: "active" | "inactive") => {
     const newStatus = currentStatus === "active" ? "inactive" : "active";
     updateProperty(id, { status: newStatus });
     toast({

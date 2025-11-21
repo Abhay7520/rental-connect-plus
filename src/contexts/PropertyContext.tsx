@@ -39,7 +39,7 @@ interface Property {
   amenities?: string[];
   images?: string[];
   available: boolean;
-  status?: string;
+  status?: "active" | "inactive";
   createdAt: string;
 }
 
@@ -51,6 +51,17 @@ interface Payment {
   status: "pending" | "completed" | "failed";
   created_at: string;
   date?: string;
+  razorpay_payment_id?: string;
+}
+
+interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  type: "festival" | "maintenance" | "event" | "general";
+  created_by: string;
+  created_at: string;
+  date: string;
 }
 
 interface PropertyContextType {
@@ -65,6 +76,7 @@ interface PropertyContextType {
   deleteProperty: (id: string) => Promise<void>;
   
   // Bookings
+  bookings: Booking[];
   createBooking: (data: any) => Promise<Booking>;
   updateBooking: (id: string, data: any) => Promise<void>;
   getTenantBookings: (tenantId: string) => Booking[];
@@ -77,9 +89,14 @@ interface PropertyContextType {
   getOwnerIssues: (ownerId: string) => Issue[];
   
   // Payments
+  payments: Payment[];
   addPayment: (data: any) => Promise<void>;
   getTenantPayments: (tenantId: string) => Payment[];
   getOwnerPayments: (ownerId: string) => Payment[];
+  
+  // Announcements
+  getAnnouncements: () => Announcement[];
+  addAnnouncement: (data: any) => Promise<void>;
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined);
@@ -89,6 +106,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
   // ============ PROPERTIES ============
@@ -254,6 +272,32 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // ============ ANNOUNCEMENTS ============
+  const getAnnouncements = (): Announcement[] => {
+    return announcements.sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  };
+
+  const addAnnouncement = async (data: any) => {
+    try {
+      const now = new Date().toISOString();
+      const newAnnouncement: Announcement = {
+        id: Date.now().toString(),
+        title: data.title || "",
+        message: data.message,
+        type: data.type || "general",
+        created_by: data.posted_by || data.created_by,
+        created_at: now,
+        date: now,
+      };
+      setAnnouncements([...announcements, newAnnouncement]);
+    } catch (error) {
+      console.error("Error adding announcement:", error);
+      throw error;
+    }
+  };
+
   // Load initial data
   useEffect(() => {
     const loadData = async () => {
@@ -289,6 +333,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addProperty,
         updateProperty,
         deleteProperty,
+        bookings,
         createBooking,
         updateBooking,
         getTenantBookings,
@@ -297,9 +342,12 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateIssue,
         getTenantIssues,
         getOwnerIssues,
+        payments,
         addPayment,
         getTenantPayments,
         getOwnerPayments,
+        getAnnouncements,
+        addAnnouncement,
       }}
     >
       {children}
