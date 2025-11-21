@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, DollarSign, Loader2, CreditCard } from "lucide-react";
+import { Calendar, DollarSign, Loader2, CreditCard, Building2, Wallet, Smartphone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const BookingForm = () => {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,8 @@ const BookingForm = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("upi");
 
   if (!property) {
     return (
@@ -50,7 +53,7 @@ const BookingForm = () => {
     return property.rent_price * months;
   };
 
-  const handlePayment = async () => {
+  const handleProceedToPayment = () => {
     if (!user || !startDate || !endDate) {
       toast({
         title: "Missing Information",
@@ -70,9 +73,17 @@ const BookingForm = () => {
       return;
     }
 
+    setShowPaymentModal(true);
+  };
+
+  const handlePayment = async () => {
+    if (!user || !startDate || !endDate) return;
+
     setIsProcessing(true);
 
     try {
+      const total = calculateTotal();
+
       // Create booking first
       const booking = await createBooking({
         property_id: property.id,
@@ -80,11 +91,11 @@ const BookingForm = () => {
         start_date: startDate,
         end_date: endDate,
         status: "pending",
+        amount: total,
       });
 
       // DEMO MODE: Simulate payment processing
-      // In production, replace this with actual Razorpay integration
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Create payment record
       await addPayment({
@@ -92,7 +103,7 @@ const BookingForm = () => {
         tenant_id: user.uid,
         amount: total,
         status: "completed",
-        razorpay_payment_id: `demo_${Date.now()}`,
+        razorpay_payment_id: `demo_${paymentMethod}_${Date.now()}`,
       });
 
       // Update booking status to confirmed
@@ -113,6 +124,7 @@ const BookingForm = () => {
       });
     } finally {
       setIsProcessing(false);
+      setShowPaymentModal(false);
     }
   };
 
@@ -198,20 +210,11 @@ const BookingForm = () => {
               <Button
                 className="w-full"
                 size="lg"
-                onClick={handlePayment}
-                disabled={!startDate || !endDate || total <= 0 || isProcessing}
+                onClick={handleProceedToPayment}
+                disabled={!startDate || !endDate || total <= 0}
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Processing Payment...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="mr-2 h-5 w-5" />
-                    Confirm Booking & Pay ${total}
-                  </>
-                )}
+                <CreditCard className="mr-2 h-5 w-5" />
+                Proceed to Payment
               </Button>
 
               <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
@@ -228,6 +231,124 @@ const BookingForm = () => {
         </div>
       </main>
       <Footer />
+
+      {/* Payment Modal - Razorpay Style */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">{property.title}</CardTitle>
+                    <CardDescription className="text-sm">{property.location}</CardDescription>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPaymentModal(false)}
+                  disabled={isProcessing}
+                >
+                  ✕
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="pt-6 space-y-6">
+              {/* Amount Display */}
+              <div className="text-center pb-4 border-b">
+                <p className="text-sm text-muted-foreground mb-1">Amount to Pay</p>
+                <p className="text-3xl font-bold text-primary">${total}</p>
+              </div>
+
+              {/* Payment Methods */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Select Payment Method</Label>
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                  {/* UPI */}
+                  <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-secondary/50 cursor-pointer">
+                    <RadioGroupItem value="upi" id="upi" />
+                    <Label htmlFor="upi" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <Smartphone className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">UPI</p>
+                        <p className="text-xs text-muted-foreground">Pay via UPI apps</p>
+                      </div>
+                    </Label>
+                  </div>
+
+                  {/* Cards */}
+                  <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-secondary/50 cursor-pointer">
+                    <RadioGroupItem value="card" id="card" />
+                    <Label htmlFor="card" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <CreditCard className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Credit/Debit Card</p>
+                        <p className="text-xs text-muted-foreground">Visa, Mastercard, Rupay</p>
+                      </div>
+                    </Label>
+                  </div>
+
+                  {/* Wallets */}
+                  <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-secondary/50 cursor-pointer">
+                    <RadioGroupItem value="wallet" id="wallet" />
+                    <Label htmlFor="wallet" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <Wallet className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Wallets</p>
+                        <p className="text-xs text-muted-foreground">Paytm, PhonePe, etc.</p>
+                      </div>
+                    </Label>
+                  </div>
+
+                  {/* Net Banking */}
+                  <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-secondary/50 cursor-pointer">
+                    <RadioGroupItem value="netbanking" id="netbanking" />
+                    <Label htmlFor="netbanking" className="flex items-center gap-3 cursor-pointer flex-1">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">Net Banking</p>
+                        <p className="text-xs text-muted-foreground">All Indian banks</p>
+                      </div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Pay Button */}
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handlePayment}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    Pay ${total}
+                  </>
+                )}
+              </Button>
+
+              {/* Security Badge */}
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Secured by 256-bit encryption</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

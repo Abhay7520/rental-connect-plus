@@ -298,6 +298,41 @@ export const BookingService = {
       throw error;
     }
   },
+
+  async getAll() {
+    try {
+      const q = query(collection(db, "bookings"));
+      const snapshot = await getDocs(q);
+      const results = [];
+      snapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      return results;
+    } catch (error) {
+      console.error("❌ [BookingService] GetAll error:", error);
+      return [];
+    }
+  },
+
+  async onSnapshot(callback, errorCallback) {
+    try {
+      const q = query(collection(db, "bookings"));
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const results = [];
+          snapshot.forEach((doc) => {
+            results.push({ id: doc.id, ...doc.data() });
+          });
+          callback(results);
+        },
+        errorCallback
+      );
+    } catch (error) {
+      console.error("❌ [BookingService] onSnapshot error:", error);
+      errorCallback(error);
+    }
+  },
 };
 
 // ============ ISSUE SERVICE ============
@@ -389,6 +424,41 @@ export const IssueService = {
       throw error;
     }
   },
+
+  async getAll() {
+    try {
+      const q = query(collection(db, "issues"));
+      const snapshot = await getDocs(q);
+      const results = [];
+      snapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      return results;
+    } catch (error) {
+      console.error("❌ [IssueService] GetAll error:", error);
+      return [];
+    }
+  },
+
+  async onSnapshot(callback, errorCallback) {
+    try {
+      const q = query(collection(db, "issues"));
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const results = [];
+          snapshot.forEach((doc) => {
+            results.push({ id: doc.id, ...doc.data() });
+          });
+          callback(results);
+        },
+        errorCallback
+      );
+    } catch (error) {
+      console.error("❌ [IssueService] onSnapshot error:", error);
+      errorCallback(error);
+    }
+  },
 };
 
 // ============ PAYMENT SERVICE ============
@@ -447,6 +517,41 @@ export const PaymentService = {
     } catch (error) {
       console.error("❌ [PaymentService] Delete error:", error);
       throw error;
+    }
+  },
+
+  async getAll() {
+    try {
+      const q = query(collection(db, "payments"));
+      const snapshot = await getDocs(q);
+      const results = [];
+      snapshot.forEach((doc) => {
+        results.push({ id: doc.id, ...doc.data() });
+      });
+      return results;
+    } catch (error) {
+      console.error("❌ [PaymentService] GetAll error:", error);
+      return [];
+    }
+  },
+
+  async onSnapshot(callback, errorCallback) {
+    try {
+      const q = query(collection(db, "payments"));
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const results = [];
+          snapshot.forEach((doc) => {
+            results.push({ id: doc.id, ...doc.data() });
+          });
+          callback(results);
+        },
+        errorCallback
+      );
+    } catch (error) {
+      console.error("❌ [PaymentService] onSnapshot error:", error);
+      errorCallback(error);
     }
   },
 };

@@ -307,22 +307,60 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  // Load initial data
+  // Load initial data with real-time sync
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        // Load properties
+        console.log("🔵 Loading all data with real-time sync...");
+        
+        // Load properties with real-time listener
         const allProps = await PropertyService.getAll();
         setProperties(allProps as Property[]);
-
-        // Subscribe to properties updates
         PropertyService.onSnapshot(
-          (data) => setProperties(data as Property[]),
-          (error) => console.error("Error loading properties:", error)
+          (data) => {
+            console.log("🔄 Properties synced:", data.length);
+            setProperties(data as Property[]);
+          },
+          (error) => console.error("❌ Error loading properties:", error)
         );
+
+        // Load bookings with real-time listener
+        const allBookings = await BookingService.getAll();
+        setBookings(allBookings as Booking[]);
+        BookingService.onSnapshot(
+          (data) => {
+            console.log("🔄 Bookings synced:", data.length);
+            setBookings(data as Booking[]);
+          },
+          (error) => console.error("❌ Error loading bookings:", error)
+        );
+
+        // Load issues with real-time listener
+        const allIssues = await IssueService.getAll();
+        setIssues(allIssues as Issue[]);
+        IssueService.onSnapshot(
+          (data) => {
+            console.log("🔄 Issues synced:", data.length);
+            setIssues(data as Issue[]);
+          },
+          (error) => console.error("❌ Error loading issues:", error)
+        );
+
+        // Load payments with real-time listener
+        const allPayments = await PaymentService.getAll();
+        setPayments(allPayments as Payment[]);
+        PaymentService.onSnapshot(
+          (data) => {
+            console.log("🔄 Payments synced:", data.length);
+            setPayments(data as Payment[]);
+          },
+          (error) => console.error("❌ Error loading payments:", error)
+        );
+
+        console.log("✅ All data loaded and synced");
       } catch (error) {
-        console.error("Error loading initial data:", error);
+        console.error("❌ Error loading initial data:", error);
       } finally {
         setLoading(false);
       }
