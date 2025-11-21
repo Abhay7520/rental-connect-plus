@@ -68,6 +68,7 @@ const AddProperty = () => {
         description: formData.description,
         rent_price: parseFloat(formData.rent_price),
         location: formData.location,
+        owner_id: user.uid,
         amenities: formData.amenities.split(",").map((a) => a.trim()).filter(Boolean),
         images: images,
         status: formData.status,

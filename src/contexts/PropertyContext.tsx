@@ -124,10 +124,19 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addProperty = async (data: any) => {
     try {
-      const newProperty = await PropertyService.create(data);
+      // Get current user ID from AuthContext (need to import useAuth at top)
+      const propertyData = {
+        ...data,
+        owner_id: data.owner_id,
+        available: true,
+        status: data.status || "active",
+      };
+      
+      const newProperty = await PropertyService.create(propertyData);
       setProperties([...properties, newProperty as Property]);
+      console.log("✅ Property added successfully");
     } catch (error) {
-      console.error("Error adding property:", error);
+      console.error("❌ Error adding property:", error);
       throw error;
     }
   };

@@ -34,10 +34,18 @@ export interface Event {
   }[];
 }
 
+interface ChatRoom {
+  code: string;
+  messages: ChatMessage[];
+  members: string[];
+  createdAt: string;
+}
+
 interface CommunityContextType {
   polls: Poll[];
   messages: ChatMessage[];
   events: Event[];
+  chatRooms: Record<string, ChatRoom>;
   addPoll: (poll: Omit<Poll, "id" | "createdBy" | "createdAt" | "voters">) => void;
   votePoll: (pollId: string, optionIndex: number) => boolean;
   addMessage: (message: Omit<ChatMessage, "id" | "sender_id" | "sender_name" | "sender_role" | "timestamp">) => void;
@@ -46,6 +54,11 @@ interface CommunityContextType {
   getPolls: () => Poll[];
   getMessages: () => ChatMessage[];
   getEvents: () => Event[];
+  createChatRoom: () => string;
+  joinChatRoom: (code: string) => boolean;
+  leaveChatRoom: (code: string) => void;
+  addMessageToRoom: (roomCode: string, message: string) => void;
+  getChatRoomMessages: (roomCode: string) => ChatMessage[];
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -54,6 +67,7 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
   const [polls, setPolls] = useState<Poll[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [chatRooms, setChatRooms] = useState<Record<string, ChatRoom>>({});
   const { user } = useAuth();
 
   useEffect(() => {
@@ -84,6 +98,11 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
     const storedEvents = localStorage.getItem("renteazy_events");
     if (storedEvents) {
       setEvents(JSON.parse(storedEvents));
+    }
+
+    const storedRooms = localStorage.getItem("renteazy_chat_rooms");
+    if (storedRooms) {
+      setChatRooms(JSON.parse(storedRooms));
     }
   }, []);
 
@@ -206,12 +225,109 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  // Chat Room Functions
+  const generateRoomCode = (): string => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
+
+  const createChatRoom = (): string => {
+    if (!user) return "";
+    
+    let code = generateRoomCode();
+    // Ensure unique code
+    while (chatRooms[code]) {
+      code = generateRoomCode();
+    }
+    
+    const newRoom: ChatRoom = {
+      code,
+      messages: [],
+      members: [user.uid],
+      createdAt: new Date().toISOString(),
+    };
+    
+    const updated = { ...chatRooms, [code]: newRoom };
+    localStorage.setItem("renteazy_chat_rooms", JSON.stringify(updated));
+    setChatRooms(updated);
+    
+    return code;
+  };
+
+  const joinChatRoom = (code: string): boolean => {
+    if (!user || !chatRooms[code]) return false;
+    
+    const room = chatRooms[code];
+    if (!room.members.includes(user.uid)) {
+      const updated = {
+        ...chatRooms,
+        [code]: {
+          ...room,
+          members: [...room.members, user.uid],
+        },
+      };
+      localStorage.setItem("renteazy_chat_rooms", JSON.stringify(updated));
+      setChatRooms(updated);
+    }
+    
+    return true;
+  };
+
+  const leaveChatRoom = (code: string) => {
+    if (!user || !chatRooms[code]) return;
+    
+    const room = chatRooms[code];
+    const updated = {
+      ...chatRooms,
+      [code]: {
+        ...room,
+        members: room.members.filter(id => id !== user.uid),
+      },
+    };
+    localStorage.setItem("renteazy_chat_rooms", JSON.stringify(updated));
+    setChatRooms(updated);
+  };
+
+  const addMessageToRoom = (roomCode: string, message: string) => {
+    if (!user || !chatRooms[roomCode]) return;
+    
+    const newMessage: ChatMessage = {
+      id: `msg_${Date.now()}_${Math.random()}`,
+      sender_id: user.uid,
+      sender_name: user.name,
+      sender_role: user.role,
+      message,
+      timestamp: new Date().toISOString(),
+    };
+    
+    const room = chatRooms[roomCode];
+    const updated = {
+      ...chatRooms,
+      [roomCode]: {
+        ...room,
+        messages: [...room.messages, newMessage],
+      },
+    };
+    localStorage.setItem("renteazy_chat_rooms", JSON.stringify(updated));
+    setChatRooms(updated);
+  };
+
+  const getChatRoomMessages = (roomCode: string): ChatMessage[] => {
+    if (!chatRooms[roomCode]) return [];
+    return chatRooms[roomCode].messages;
+  };
+
   return (
     <CommunityContext.Provider
       value={{
         polls,
         messages,
         events,
+        chatRooms,
         addPoll,
         votePoll,
         addMessage,
@@ -220,6 +336,11 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
         getPolls,
         getMessages,
         getEvents,
+        createChatRoom,
+        joinChatRoom,
+        leaveChatRoom,
+        addMessageToRoom,
+        getChatRoomMessages,
       }}
     >
       {children}
