@@ -51,16 +51,22 @@ const TenantDashboard = () => {
           </div>
 
           <div className="grid gap-6 md:grid-cols-4 mb-8">
-            {stats.map((stat) => (
-              <Card key={stat.label}>
+            {stats.map((stat, index) => (
+              <Card 
+                key={stat.label} 
+                className="hover-lift hover:border-primary/30 border-2"
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
                     {stat.label}
                   </CardTitle>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className="text-2xl font-bold text-gradient">{stat.value}</div>
                 </CardContent>
               </Card>
             ))}
@@ -69,12 +75,12 @@ const TenantDashboard = () => {
           {/* Quick Action Cards */}
           <div className="grid gap-6 md:grid-cols-4 mb-6">
             <Card 
-              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              className="hover-lift hover:shadow-elegant cursor-pointer group border-2 hover:border-primary/30" 
               onClick={() => navigate("/tenant/browse")}
             >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl group-hover:scale-110 transition-transform">
                     <Search className="h-6 w-6 text-primary" />
                   </div>
                   <div>
@@ -86,12 +92,12 @@ const TenantDashboard = () => {
             </Card>
 
             <Card 
-              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              className="hover-lift hover:shadow-elegant cursor-pointer group border-2 hover:border-primary/30" 
               onClick={() => navigate("/tenant/payments")}
             >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl group-hover:scale-110 transition-transform">
                     <CreditCard className="h-6 w-6 text-primary" />
                   </div>
                   <div>
@@ -103,12 +109,12 @@ const TenantDashboard = () => {
             </Card>
 
             <Card 
-              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              className="hover-lift hover:shadow-elegant cursor-pointer group border-2 hover:border-primary/30" 
               onClick={() => navigate("/tenant/reminders")}
             >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl group-hover:scale-110 transition-transform">
                     <Bell className="h-6 w-6 text-primary" />
                   </div>
                   <div>
@@ -121,12 +127,12 @@ const TenantDashboard = () => {
 
             {/* ✅ NEW: Raise Issue Button */}
             <Card 
-              className="hover:shadow-lg transition-shadow cursor-pointer" 
+              className="hover-lift hover:shadow-elegant cursor-pointer group border-2 hover:border-primary/30" 
               onClick={() => navigate("/tenant/issues")}
             >
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 bg-primary/10 rounded-lg">
+                  <div className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl group-hover:scale-110 transition-transform">
                     <AlertCircle className="h-6 w-6 text-primary" />
                   </div>
                   <div>
@@ -142,11 +148,11 @@ const TenantDashboard = () => {
           <div className="mt-6">
             <h2 className="text-xl font-semibold mb-4">Community Features</h2>
             <div className="grid gap-4 md:grid-cols-3">
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/community/polls")}>
+              <Card className="hover-lift hover:shadow-elegant cursor-pointer group border-2 hover:border-accent/30" onClick={() => navigate("/community/polls")}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-primary/10 rounded-lg">
-                      <FileText className="h-6 w-6 text-primary" />
+                    <div className="p-3 bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl group-hover:scale-110 transition-transform">
+                      <FileText className="h-6 w-6 text-accent" />
                     </div>
                     <div>
                       <p className="font-semibold">Polls</p>
@@ -156,11 +162,11 @@ const TenantDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/community/chat")}>
+              <Card className="hover-lift hover:shadow-elegant cursor-pointer group border-2 hover:border-accent/30" onClick={() => navigate("/community/chat")}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-primary/10 rounded-lg">
-                      <MessageCircle className="h-6 w-6 text-primary" />
+                    <div className="p-3 bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl group-hover:scale-110 transition-transform">
+                      <MessageCircle className="h-6 w-6 text-accent" />
                     </div>
                     <div>
                       <p className="font-semibold">Chat</p>
@@ -170,11 +176,11 @@ const TenantDashboard = () => {
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/community/events")}>
+              <Card className="hover-lift hover:shadow-elegant cursor-pointer group border-2 hover:border-accent/30" onClick={() => navigate("/community/events")}>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-3 bg-primary/10 rounded-lg">
-                      <Users className="h-6 w-6 text-primary" />
+                    <div className="p-3 bg-gradient-to-br from-accent/10 to-accent/5 rounded-xl group-hover:scale-110 transition-transform">
+                      <Users className="h-6 w-6 text-accent" />
                     </div>
                     <div>
                       <p className="font-semibold">Events</p>
