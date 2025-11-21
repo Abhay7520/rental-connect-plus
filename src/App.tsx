@@ -14,7 +14,8 @@ import Chatbot from "./pages/Chatbot";
 import TenantDashboard from "./pages/tenant/Dashboard";
 import Browse from "./pages/tenant/Browse";
 import PropertyDetails from "./pages/tenant/PropertyDetails";
-import Book from "./pages/tenant/Book";
+import Bookings from "./pages/tenant/Bookings";
+import BookingForm from "./pages/tenant/BookingForm";
 import Payments from "./pages/tenant/Payments";
 import TenantIssues from "./pages/tenant/Issues";
 import TenantReminders from "./pages/tenant/Reminders";
@@ -33,6 +34,7 @@ import Announcements from "./pages/Announcements";
 import PostAnnouncement from "./pages/owner/PostAnnouncement";
 import Polls from "./pages/community/Polls";
 import Chat from "./pages/community/Chat";
+import NewChat from "./pages/community/NewChat";
 import Events from "./pages/community/Events";
 import NotFound from "./pages/NotFound";
 
@@ -82,7 +84,15 @@ const App = () => (
                   path="/tenant/book/:id"
                   element={
                     <ProtectedRoute allowedRoles={["tenant"]}>
-                      <Book />
+                      <BookingForm />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/tenant/bookings"
+                  element={
+                    <ProtectedRoute allowedRoles={["tenant"]}>
+                      <Bookings />
                     </ProtectedRoute>
                   }
                 />
@@ -230,6 +240,14 @@ const App = () => (
                 />
                 <Route
                   path="/community/chat"
+                  element={
+                    <ProtectedRoute>
+                      <NewChat />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/community/chat/global"
                   element={
                     <ProtectedRoute>
                       <Chat />
