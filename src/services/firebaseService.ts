@@ -9,8 +9,94 @@ import {
   where,
   onSnapshot,
   getDocs,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/firebase/config";
+
+// ============ USER ROLES SERVICE (SECURITY LAYER) ============
+export const UserRolesService = {
+  async create(userId, role) {
+    try {
+      console.log("🔵 [UserRolesService] Creating role for user:", userId, role);
+      const roleData = {
+        userId,
+        role,
+        assignedAt: new Date().toISOString(),
+        assignedBy: "system", // You can pass actual admin ID when updating
+      };
+
+      const roleRef = doc(db, "user_roles", userId);
+      await setDoc(roleRef, roleData);
+      console.log("✅ [UserRolesService] Role created");
+      return roleData;
+    } catch (error) {
+      console.error("❌ [UserRolesService] Create error:", error);
+      throw error;
+    }
+  },
+
+  async getRole(userId) {
+    try {
+      const roleRef = doc(db, "user_roles", userId);
+      const roleSnap = await getDoc(roleRef);
+      
+      if (roleSnap.exists()) {
+        return roleSnap.data();
+      }
+      return null;
+    } catch (error) {
+      console.error("❌ [UserRolesService] GetRole error:", error);
+      return null;
+    }
+  },
+
+  async updateRole(userId, newRole, assignedBy = "admin") {
+    try {
+      console.log("🔵 [UserRolesService] Updating role:", userId, newRole);
+      const roleRef = doc(db, "user_roles", userId);
+      await updateDoc(roleRef, {
+        role: newRole,
+        assignedBy,
+        assignedAt: new Date().toISOString(),
+      });
+      console.log("✅ [UserRolesService] Role updated");
+    } catch (error) {
+      console.error("❌ [UserRolesService] Update error:", error);
+      throw error;
+    }
+  },
+
+  async delete(userId) {
+    try {
+      const roleRef = doc(db, "user_roles", userId);
+      await deleteDoc(roleRef);
+      console.log("✅ [UserRolesService] Role deleted");
+    } catch (error) {
+      console.error("❌ [UserRolesService] Delete error:", error);
+      throw error;
+    }
+  },
+
+  onSnapshot(callback, errorCallback) {
+    try {
+      const q = query(collection(db, "user_roles"));
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const results = [];
+          snapshot.forEach((doc) => {
+            results.push({ id: doc.id, ...doc.data() });
+          });
+          callback(results);
+        },
+        errorCallback
+      );
+    } catch (error) {
+      console.error("❌ [UserRolesService] onSnapshot error:", error);
+      if (errorCallback) errorCallback(error);
+    }
+  },
+};
 
 // ============ USER SERVICE ============
 export const UserService = {
