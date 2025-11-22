@@ -17,6 +17,7 @@ export interface User {
   phone?: string;
   address?: string;
   createdAt: string;
+  lastLogin?: string;
 }
 
 interface AuthContextType {
@@ -68,6 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 phone: raw.phone,
                 address: raw.address,
                 createdAt: raw.createdAt || new Date().toISOString(),
+                lastLogin: raw.lastLogin,
               };
               setUser(mappedUser);
             }
@@ -160,6 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const users = await UserService.getByEmail(email);
         if (users.length > 0) {
           const raw = users[0] as any;
+          const lastLogin = new Date().toISOString();
           const mappedUser: User = {
             uid: raw.uid || raw.id || "",
             name: raw.name || "",
@@ -168,7 +171,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             phone: raw.phone,
             address: raw.address,
             createdAt: raw.createdAt || new Date().toISOString(),
+            lastLogin: lastLogin,
           };
+          
+          // Update lastLogin in Firebase
+          await UserService.update(raw.uid || raw.id, { lastLogin });
+          
           setUser(mappedUser);
         }
       } catch (error: any) {

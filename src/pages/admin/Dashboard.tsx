@@ -3,6 +3,7 @@ import { useProperty } from "@/contexts/PropertyContext";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, Building2, Calendar, DollarSign } from "lucide-react";
@@ -16,7 +17,8 @@ const AdminDashboard = () => {
   const totalRevenue = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   const recentUsers = [...allUsers]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .filter(u => u.lastLogin)
+    .sort((a, b) => new Date(b.lastLogin!).getTime() - new Date(a.lastLogin!).getTime())
     .slice(0, 5);
 
   const stats = [
@@ -31,6 +33,7 @@ const AdminDashboard = () => {
       <Navbar />
       <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
         <div className="container mx-auto px-4 py-8">
+          <BackButton />
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
@@ -67,12 +70,12 @@ const AdminDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Recent User Activity</CardTitle>
-                <CardDescription>Latest users</CardDescription>
+                <CardDescription>Latest login activity</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {recentUsers.length === 0 ? (
-                    <span className="text-muted-foreground">No users yet.</span>
+                    <span className="text-muted-foreground">No recent logins.</span>
                   ) : (
                     recentUsers.map((u) => (
                       <div key={u.uid} className="flex items-center justify-between pb-3 border-b last:border-0">
@@ -84,7 +87,7 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(u.createdAt).toLocaleDateString()} 
+                          {new Date(u.lastLogin!).toLocaleString()} 
                         </span>
                       </div>
                     ))
