@@ -76,7 +76,7 @@ export const UserService = {
     }
   },
 
-  async onSnapshot(callback, errorCallback) {
+  onSnapshot(callback, errorCallback) {
     try {
       const q = query(collection(db, "users"));
       return onSnapshot(
@@ -92,7 +92,7 @@ export const UserService = {
       );
     } catch (error) {
       console.error("❌ [UserService] onSnapshot error:", error);
-      errorCallback(error);
+      if (errorCallback) errorCallback(error);
     }
   },
 };
