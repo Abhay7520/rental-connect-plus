@@ -7,7 +7,7 @@ import {
   User as FirebaseUser,
 } from "firebase/auth";
 import { auth } from "@/firebase/config";
-import { UserService } from "@/services/firebaseService";
+import { UserService, UserRolesService } from "@/services/firebaseService";
 
 export interface User {
   uid: string;
@@ -57,15 +57,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (firebaseUser) {
           try {
-            // Get user data from Firestore
+            // Get user data from Firestore (WITHOUT role)
             const users = await UserService.getByEmail(firebaseUser.email || "");
             if (users.length > 0) {
               const raw = users[0] as any;
+              
+              // ✅ SECURITY: Fetch role from separate user_roles collection
+              const roleData = await UserRolesService.getRole(raw.uid || raw.id);
+              const userRole = (roleData?.role as User["role"]) || "tenant";
+              
               const mappedUser: User = {
                 uid: raw.uid || raw.id || "",
                 name: raw.name || "",
                 email: raw.email || "",
-                role: (raw.role as User["role"]) || "tenant",
+                role: userRole, // ✅ Role from secure collection
                 phone: raw.phone,
                 address: raw.address,
                 createdAt: raw.createdAt || new Date().toISOString(),
@@ -82,21 +87,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
       });
 
-      // Set up real-time listener for ALL users (for admin dashboard)
+      // Set up real-time listener for ALL users AND their roles (for admin dashboard)
       const usersUnsubscribe = UserService.onSnapshot(
-        (users) => {
-          const mappedUsers: User[] = users.map((raw: any) => ({
-            uid: raw.uid || raw.id || "",
-            name: raw.name || "",
-            email: raw.email || "",
-            role: (raw.role as User["role"]) || "tenant",
-            phone: raw.phone,
-            address: raw.address,
-            createdAt: raw.createdAt || new Date().toISOString(),
-            lastLogin: raw.lastLogin,
-          }));
-          setAllUsers(mappedUsers);
-          console.log("✅ Loaded all users:", mappedUsers.length);
+        async (users) => {
+          // ✅ SECURITY: Fetch roles separately for each user
+          const usersWithRoles = await Promise.all(
+            users.map(async (raw: any) => {
+              const roleData = await UserRolesService.getRole(raw.uid || raw.id);
+              return {
+                uid: raw.uid || raw.id || "",
+                name: raw.name || "",
+                email: raw.email || "",
+                role: (roleData?.role as User["role"]) || "tenant", // ✅ Role from secure collection
+                phone: raw.phone,
+                address: raw.address,
+                createdAt: raw.createdAt || new Date().toISOString(),
+                lastLogin: raw.lastLogin,
+              };
+            })
+          );
+          setAllUsers(usersWithRoles);
+          console.log("✅ Loaded all users with secure roles:", usersWithRoles.length);
         },
         (error) => {
           console.error("❌ Error in users listener:", error);
@@ -134,21 +145,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const uid = userCredential.user.uid;
         console.log("Firebase user created:", uid);
 
-        // Step 2: Create user document in Firestore with EXPLICIT UID as ID
-        const newUser: User = {
+        // Step 2: Create user profile in Firestore (WITHOUT role)
+        const userProfileData = {
           uid: uid,
           name: data.name,
           email: data.email,
-          role: data.role,
-          phone: data.phone,
-          address: data.address,
+          phone: data.phone || "",
+          address: data.address || "",
           createdAt: new Date().toISOString(),
         };
 
-        // ✅ IMPORTANT: Pass id so UserService uses setDoc with explicit ID
-        await UserService.create({ ...newUser, id: uid });
-        console.log("User document created in Firestore with UID as ID");
+        await UserService.create({ ...userProfileData, id: uid });
+        console.log("User profile created in Firestore");
 
+        // Step 3: ✅ SECURITY: Create role in separate user_roles collection
+        await UserRolesService.create(uid, data.role);
+        console.log("✅ User role created in secure collection");
+
+        // Update local state with complete user object
+        const newUser: User = {
+          ...userProfileData,
+          role: data.role,
+        };
         setUser(newUser);
       } catch (error: any) {
         console.error("Signup error:", error);
@@ -187,11 +205,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (users.length > 0) {
           const raw = users[0] as any;
           const lastLogin = new Date().toISOString();
+          
+          // ✅ SECURITY: Fetch role from separate collection
+          const roleData = await UserRolesService.getRole(raw.uid || raw.id);
+          const userRole = (roleData?.role as User["role"]) || "tenant";
+          
           const mappedUser: User = {
             uid: raw.uid || raw.id || "",
             name: raw.name || "",
             email: raw.email || "",
-            role: (raw.role as User["role"]) || "tenant",
+            role: userRole, // ✅ Role from secure collection
             phone: raw.phone,
             address: raw.address,
             createdAt: raw.createdAt || new Date().toISOString(),
@@ -238,27 +261,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const deleteUser = (uid: string) => {
-    const users = getAllUsers();
-    const updatedUsers = users.filter((u) => u.uid !== uid);
-    localStorage.setItem("renteazy_users", JSON.stringify(updatedUsers));
-    setAllUsers(updatedUsers);
+  const deleteUser = async (uid: string) => {
+    if (USE_FIREBASE) {
+      try {
+        // Delete from both collections
+        await UserService.delete(uid);
+        await UserRolesService.delete(uid);
+        console.log("✅ User and role deleted from Firestore");
+        
+        // Update local state
+        const updatedUsers = allUsers.filter((u) => u.uid !== uid);
+        setAllUsers(updatedUsers);
+      } catch (error) {
+        console.error("❌ Delete user error:", error);
+        throw error;
+      }
+    } else {
+      const users = getAllUsers();
+      const updatedUsers = users.filter((u) => u.uid !== uid);
+      localStorage.setItem("renteazy_users", JSON.stringify(updatedUsers));
+      setAllUsers(updatedUsers);
+    }
 
     if (user?.uid === uid) {
       logout();
     }
   };
 
-  const updateUserRole = (uid: string, role: User["role"]) => {
-    const users = getAllUsers();
-    const updatedUsers = users.map((u) => (u.uid === uid ? { ...u, role } : u));
-    localStorage.setItem("renteazy_users", JSON.stringify(updatedUsers));
-    setAllUsers(updatedUsers);
+  const updateUserRole = async (uid: string, role: User["role"]) => {
+    if (USE_FIREBASE) {
+      try {
+        // ✅ SECURITY: Update role in secure user_roles collection only
+        await UserRolesService.updateRole(uid, role, user?.uid || "admin");
+        console.log("✅ User role updated in secure collection");
+        
+        // Update local state
+        const updatedUsers = allUsers.map((u) => (u.uid === uid ? { ...u, role } : u));
+        setAllUsers(updatedUsers);
+      } catch (error) {
+        console.error("❌ Update role error:", error);
+        throw error;
+      }
+    } else {
+      const users = getAllUsers();
+      const updatedUsers = users.map((u) => (u.uid === uid ? { ...u, role } : u));
+      localStorage.setItem("renteazy_users", JSON.stringify(updatedUsers));
+      setAllUsers(updatedUsers);
 
-    if (user?.uid === uid) {
-      const updatedUser = { ...user, role };
-      localStorage.setItem("renteazy_user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      if (user?.uid === uid) {
+        const updatedUser = { ...user, role };
+        localStorage.setItem("renteazy_user", JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      }
     }
   };
 
