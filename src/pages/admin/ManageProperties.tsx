@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useProperty } from "@/contexts/PropertyContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import BackButton from "@/components/BackButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,6 +41,7 @@ const ManageProperties = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8">
+        <BackButton />
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Manage Properties</h1>
           <p className="text-muted-foreground">View and manage all listed properties</p>
