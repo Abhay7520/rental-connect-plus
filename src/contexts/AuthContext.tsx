@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (USE_FIREBASE) {
       // Firebase Auth listener
-      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
         console.log("Auth state changed:", firebaseUser?.uid);
 
         if (firebaseUser) {
@@ -82,7 +82,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
       });
 
-      return () => unsubscribe();
+      // Set up real-time listener for ALL users (for admin dashboard)
+      const usersUnsubscribe = UserService.onSnapshot(
+        (users) => {
+          const mappedUsers: User[] = users.map((raw: any) => ({
+            uid: raw.uid || raw.id || "",
+            name: raw.name || "",
+            email: raw.email || "",
+            role: (raw.role as User["role"]) || "tenant",
+            phone: raw.phone,
+            address: raw.address,
+            createdAt: raw.createdAt || new Date().toISOString(),
+            lastLogin: raw.lastLogin,
+          }));
+          setAllUsers(mappedUsers);
+          console.log("✅ Loaded all users:", mappedUsers.length);
+        },
+        (error) => {
+          console.error("❌ Error in users listener:", error);
+        }
+      );
+
+      return () => {
+        authUnsubscribe();
+        usersUnsubscribe?.();
+      };
     } else {
       // localStorage check
       const storedUser = localStorage.getItem("renteazy_user");
