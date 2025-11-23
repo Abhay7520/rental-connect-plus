@@ -25,10 +25,8 @@ const Signup = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ✅ CRITICAL FIX: Check if user is already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      console.log("✅ User already logged in:", user.role);
       navigate(`/${user.role}/dashboard`, { replace: true });
     }
   }, [user, authLoading, navigate]);
@@ -57,33 +55,22 @@ const Signup = () => {
     setLoading(true);
 
     try {
-      console.log("🔵 [Signup] Starting signup with email:", formData.email);
-      
-      // ✅ Call signup - this updates the auth context
       await signup(formData as any);
-      
-      console.log("✅ [Signup] Signup completed, user created in Firebase");
-
-      // ✅ FIX: Don't navigate here! Let the useEffect above handle it
-      // The useEffect will trigger when 'user' state changes from AuthContext
       
       toast({
         title: "Account created!",
         description: "Redirecting to your dashboard...",
       });
-
     } catch (error: any) {
-      console.error("❌ [Signup] Signup error:", error);
       toast({
         title: "Signup failed",
-        description: error.message || "Something went wrong. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
       setLoading(false);
     }
   };
 
-  // ✅ Show loading state while auth is checking
   if (authLoading) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -99,7 +86,6 @@ const Signup = () => {
     );
   }
 
-  // ✅ If already logged in, will redirect via useEffect above
   if (user) {
     return null;
   }

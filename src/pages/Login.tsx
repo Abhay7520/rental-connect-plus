@@ -18,10 +18,8 @@ const Login = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ✅ CRITICAL FIX: Check if user is already logged in
   useEffect(() => {
     if (!authLoading && user) {
-      console.log("✅ User already logged in:", user.role);
       navigate(`/${user.role}/dashboard`, { replace: true });
     }
   }, [user, authLoading, navigate]);
@@ -41,33 +39,22 @@ const Login = () => {
     setLoading(true);
 
     try {
-      console.log("🔵 [Login] Starting login with email:", email);
-      
-      // ✅ Call login - this updates the auth context
       await login(email, password);
-      
-      console.log("✅ [Login] Login API call completed");
-      
-      // ✅ FIX: Don't navigate here! Let the useEffect above handle it
-      // The useEffect will trigger when 'user' state changes from AuthContext
       
       toast({
         title: "Login successful!",
         description: "Redirecting to your dashboard...",
       });
-      
     } catch (error: any) {
-      console.error("❌ [Login] Login error:", error);
       toast({
         title: "Login failed",
-        description: error.message || "Invalid credentials. Please try again or sign up.",
+        description: error.message || "Invalid credentials.",
         variant: "destructive",
       });
       setLoading(false);
     }
   };
 
-  // ✅ Show loading state while auth is checking
   if (authLoading) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -83,7 +70,6 @@ const Login = () => {
     );
   }
 
-  // ✅ If already logged in, will redirect via useEffect above
   if (user) {
     return null;
   }
