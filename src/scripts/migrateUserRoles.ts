@@ -144,7 +144,5 @@ export async function runMigration() {
   }
 }
 
-// Auto-run if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  runMigration();
-}
+// Note: This script is designed to be run from the admin UI (/admin/migrate-roles)
+// It should not be auto-executed on import
