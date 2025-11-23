@@ -64,7 +64,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               
               // ✅ SECURITY: Fetch role from separate user_roles collection
               const roleData = await UserRolesService.getRole(raw.uid || raw.id);
-              const userRole = (roleData?.role as User["role"]) || "tenant";
+              
+              // ⚠️ CRITICAL: Don't set user if role is not found yet
+              if (!roleData?.role) {
+                console.log("⚠️ Role not found for user, waiting...");
+                setLoading(false);
+                return;
+              }
+              
+              const userRole = roleData.role as User["role"];
               
               const mappedUser: User = {
                 uid: raw.uid || raw.id || "",
@@ -76,10 +84,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 createdAt: raw.createdAt || new Date().toISOString(),
                 lastLogin: raw.lastLogin,
               };
+              
+              console.log("✅ User loaded with role:", userRole);
               setUser(mappedUser);
+            } else {
+              console.log("⚠️ User profile not found in Firestore");
+              setUser(null);
             }
           } catch (error) {
-            console.error("Error fetching user data:", error);
+            console.error("❌ Error fetching user data:", error);
+            setUser(null);
           }
         } else {
           setUser(null);
@@ -208,7 +222,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           
           // ✅ SECURITY: Fetch role from separate collection
           const roleData = await UserRolesService.getRole(raw.uid || raw.id);
-          const userRole = (roleData?.role as User["role"]) || "tenant";
+          
+          if (!roleData?.role) {
+            throw new Error("User role not found. Please contact administrator.");
+          }
+          
+          const userRole = roleData.role as User["role"];
           
           const mappedUser: User = {
             uid: raw.uid || raw.id || "",
@@ -221,10 +240,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             lastLogin: lastLogin,
           };
           
+          console.log("✅ Login successful - Role:", userRole);
+          
           // Update lastLogin in Firebase
           await UserService.update(raw.uid || raw.id, { lastLogin });
           
           setUser(mappedUser);
+        } else {
+          throw new Error("User not found. Please sign up first.");
         }
       } catch (error: any) {
         console.error("Login error:", error);

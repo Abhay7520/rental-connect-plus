@@ -126,14 +126,16 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addProperty = async (data: any) => {
     try {
-      // Get current user ID from AuthContext (need to import useAuth at top)
+      // ✅ Map ownerId to owner_id for internal use
       const propertyData = {
         ...data,
-        owner_id: data.owner_id,
+        ownerId: data.ownerId, // Firebase rules expect ownerId
+        owner_id: data.ownerId, // Internal state uses owner_id
         available: true,
         status: data.status || "active",
       };
       
+      console.log("🔵 Creating property with data:", propertyData);
       const newProperty = await PropertyService.create(propertyData);
       setProperties([...properties, newProperty as Property]);
       console.log("✅ Property added successfully");
