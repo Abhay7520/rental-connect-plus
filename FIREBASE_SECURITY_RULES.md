@@ -76,6 +76,9 @@ service cloud.firestore {
       // Admins can read all profiles
       allow read: if isAdmin();
       
+      // Allow authenticated users to list all users (needed for UI)
+      allow list: if isAuthenticated();
+      
       // Users can create their profile on signup
       allow create: if isAuthenticated() && request.auth.uid == userId;
       
