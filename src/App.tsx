@@ -30,6 +30,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import ManageUsers from "./pages/admin/ManageUsers";
 import AdminManageProperties from "./pages/admin/ManageProperties";
 import Reports from "./pages/admin/Reports";
+import MigrateRoles from "./pages/admin/MigrateRoles";
 import Announcements from "./pages/Announcements";
 import PostAnnouncement from "./pages/owner/PostAnnouncement";
 import Polls from "./pages/community/Polls";
@@ -216,6 +217,14 @@ const App = () => (
                   element={
                     <ProtectedRoute allowedRoles={["admin"]}>
                       <Reports />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/migrate-roles"
+                  element={
+                    <ProtectedRoute allowedRoles={["admin"]}>
+                      <MigrateRoles />
                     </ProtectedRoute>
                   }
                 />
