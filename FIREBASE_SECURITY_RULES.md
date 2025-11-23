@@ -37,18 +37,27 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function getUserRole() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/user_roles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role
+        : null;
+    }
+    
     function isAdmin() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'admin';
+      return getUserRole() == 'admin';
     }
     
     function isOwner() {
-      return isAuthenticated() && 
-             get(/databases/$(database)/documents/user_roles/$(request.auth.uid)).data.role == 'owner';
+      return getUserRole() == 'owner';
+    }
+    
+    function isTenant() {
+      return getUserRole() == 'tenant';
     }
     
     function isOwnerOfProperty(propertyId) {
       return isAuthenticated() && 
+             exists(/databases/$(database)/documents/properties/$(propertyId)) &&
              get(/databases/$(database)/documents/properties/$(propertyId)).data.ownerId == request.auth.uid;
     }
     
@@ -59,10 +68,15 @@ service cloud.firestore {
       // Anyone can read their own role
       allow read: if isAuthenticated() && request.auth.uid == userId;
       
-      // Admins can read all roles
-      allow read: if isAdmin();
+      // Allow authenticated users to read roles for authorization checks
+      allow read: if isAuthenticated();
       
-      // ONLY admins can create/update/delete roles
+      // Users can create their own role ONLY during signup (when no role exists yet)
+      allow create: if isAuthenticated() && 
+                    request.auth.uid == userId && 
+                    !exists(/databases/$(database)/documents/user_roles/$(userId));
+      
+      // ONLY admins can update/delete roles or create roles for other users
       allow create, update, delete: if isAdmin();
     }
     
@@ -98,8 +112,9 @@ service cloud.firestore {
       // Everyone can read properties (for browsing)
       allow read: if true;
       
-      // Only authenticated users can create properties (for themselves)
-      allow create: if isAuthenticated() && 
+      // Only owners and admins can create properties
+      // Must set ownerId to their own UID
+      allow create: if (isOwner() || isAdmin()) && 
                     request.resource.data.ownerId == request.auth.uid;
       
       // Only property owner or admin can update
