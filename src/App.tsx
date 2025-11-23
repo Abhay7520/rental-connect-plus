@@ -31,6 +31,7 @@ import ManageUsers from "./pages/admin/ManageUsers";
 import AdminManageProperties from "./pages/admin/ManageProperties";
 import Reports from "./pages/admin/Reports";
 import MigrateRoles from "./pages/admin/MigrateRoles";
+import CreateUserRoles from "./pages/admin/CreateUserRoles";
 import Announcements from "./pages/Announcements";
 import PostAnnouncement from "./pages/owner/PostAnnouncement";
 import Polls from "./pages/community/Polls";
@@ -54,6 +55,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/create-user-role" element={<CreateUserRoles />} />
                 <Route 
                   path="/chatbot" 
                   element={
