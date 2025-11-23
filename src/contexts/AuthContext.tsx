@@ -53,21 +53,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (USE_FIREBASE) {
       // Firebase Auth listener
       const authUnsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-        console.log("Auth state changed:", firebaseUser?.uid);
-
         if (firebaseUser) {
           try {
-            // Get user data from Firestore (WITHOUT role)
             const users = await UserService.getByEmail(firebaseUser.email || "");
             if (users.length > 0) {
               const raw = users[0] as any;
               
-              // ✅ SECURITY: Fetch role from separate user_roles collection
-              const roleData = await UserRolesService.getRole(raw.uid || raw.id);
+              // Fetch role from separate user_roles collection
+              let roleData = await UserRolesService.getRole(raw.uid || raw.id);
               
-              // ⚠️ CRITICAL: Don't set user if role is not found yet
+              // Retry once if role not found (handles timing during signup)
               if (!roleData?.role) {
-                console.log("⚠️ Role not found for user, waiting...");
+                await new Promise(resolve => setTimeout(resolve, 500));
+                roleData = await UserRolesService.getRole(raw.uid || raw.id);
+              }
+              
+              if (!roleData?.role) {
                 setLoading(false);
                 return;
               }
@@ -78,21 +79,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 uid: raw.uid || raw.id || "",
                 name: raw.name || "",
                 email: raw.email || "",
-                role: userRole, // ✅ Role from secure collection
+                role: userRole,
                 phone: raw.phone,
                 address: raw.address,
                 createdAt: raw.createdAt || new Date().toISOString(),
                 lastLogin: raw.lastLogin,
               };
               
-              console.log("✅ User loaded with role:", userRole);
               setUser(mappedUser);
             } else {
-              console.log("⚠️ User profile not found in Firestore");
               setUser(null);
             }
           } catch (error) {
-            console.error("❌ Error fetching user data:", error);
+            console.error("Error loading user:", error);
             setUser(null);
           }
         } else {
@@ -101,10 +100,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
       });
 
-      // Set up real-time listener for ALL users AND their roles (for admin dashboard)
       const usersUnsubscribe = UserService.onSnapshot(
         async (users) => {
-          // ✅ SECURITY: Fetch roles separately for each user
           const usersWithRoles = await Promise.all(
             users.map(async (raw: any) => {
               const roleData = await UserRolesService.getRole(raw.uid || raw.id);
@@ -112,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 uid: raw.uid || raw.id || "",
                 name: raw.name || "",
                 email: raw.email || "",
-                role: (roleData?.role as User["role"]) || "tenant", // ✅ Role from secure collection
+                role: (roleData?.role as User["role"]) || "tenant",
                 phone: raw.phone,
                 address: raw.address,
                 createdAt: raw.createdAt || new Date().toISOString(),
@@ -121,10 +118,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             })
           );
           setAllUsers(usersWithRoles);
-          console.log("✅ Loaded all users with secure roles:", usersWithRoles.length);
         },
         (error) => {
-          console.error("❌ Error in users listener:", error);
+          console.error("Error loading users:", error);
         }
       );
 
@@ -151,15 +147,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = async (data: SignupData) => {
     if (USE_FIREBASE) {
       try {
-        console.log("Starting Firebase signup...");
-
-        // Step 1: Create Firebase Auth user
+        // Create Firebase Auth user
         const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-
         const uid = userCredential.user.uid;
-        console.log("Firebase user created:", uid);
 
-        // Step 2: Create user profile in Firestore (WITHOUT role)
+        // Create user profile in Firestore
         const userProfileData = {
           uid: uid,
           name: data.name,
@@ -170,21 +162,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
 
         await UserService.create({ ...userProfileData, id: uid });
-        console.log("User profile created in Firestore");
 
-        // Step 3: ✅ SECURITY: Create role in separate user_roles collection
+        // Create role in separate user_roles collection
         await UserRolesService.create(uid, data.role);
-        console.log("✅ User role created in secure collection");
 
-        // Update local state with complete user object
+        // Update local state
         const newUser: User = {
           ...userProfileData,
           role: data.role,
         };
         setUser(newUser);
       } catch (error: any) {
-        console.error("Signup error:", error);
-        throw new Error(error.message || "Signup failed");
+        const message = error.code === "auth/email-already-in-use" 
+          ? "Email already in use. Please login instead."
+          : error.message || "Signup failed";
+        throw new Error(message);
       }
     } else {
       // localStorage signup
@@ -210,17 +202,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     if (USE_FIREBASE) {
       try {
-        console.log("Starting Firebase login...");
-
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log("Firebase login successful:", userCredential.user.uid);
 
         const users = await UserService.getByEmail(email);
         if (users.length > 0) {
           const raw = users[0] as any;
           const lastLogin = new Date().toISOString();
           
-          // ✅ SECURITY: Fetch role from separate collection
+          // Fetch role from separate collection
           const roleData = await UserRolesService.getRole(raw.uid || raw.id);
           
           if (!roleData?.role) {
@@ -233,25 +222,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             uid: raw.uid || raw.id || "",
             name: raw.name || "",
             email: raw.email || "",
-            role: userRole, // ✅ Role from secure collection
+            role: userRole,
             phone: raw.phone,
             address: raw.address,
             createdAt: raw.createdAt || new Date().toISOString(),
             lastLogin: lastLogin,
           };
           
-          console.log("✅ Login successful - Role:", userRole);
-          
-          // Update lastLogin in Firebase
           await UserService.update(raw.uid || raw.id, { lastLogin });
-          
           setUser(mappedUser);
         } else {
-          throw new Error("User not found. Please sign up first.");
+          throw new Error("User profile not found. Please contact administrator.");
         }
       } catch (error: any) {
-        console.error("Login error:", error);
-        throw new Error(error.message || "Login failed");
+        const message = error.code === "auth/invalid-credential" 
+          ? "Invalid email or password."
+          : error.message || "Login failed";
+        throw new Error(message);
       }
     } else {
       // localStorage login
@@ -287,16 +274,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const deleteUser = async (uid: string) => {
     if (USE_FIREBASE) {
       try {
-        // Delete from both collections
         await UserService.delete(uid);
         await UserRolesService.delete(uid);
-        console.log("✅ User and role deleted from Firestore");
         
-        // Update local state
         const updatedUsers = allUsers.filter((u) => u.uid !== uid);
         setAllUsers(updatedUsers);
       } catch (error) {
-        console.error("❌ Delete user error:", error);
+        console.error("Error deleting user:", error);
         throw error;
       }
     } else {
@@ -314,15 +298,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateUserRole = async (uid: string, role: User["role"]) => {
     if (USE_FIREBASE) {
       try {
-        // ✅ SECURITY: Update role in secure user_roles collection only
         await UserRolesService.updateRole(uid, role, user?.uid || "admin");
-        console.log("✅ User role updated in secure collection");
         
-        // Update local state
         const updatedUsers = allUsers.map((u) => (u.uid === uid ? { ...u, role } : u));
         setAllUsers(updatedUsers);
       } catch (error) {
-        console.error("❌ Update role error:", error);
+        console.error("Error updating role:", error);
         throw error;
       }
     } else {
