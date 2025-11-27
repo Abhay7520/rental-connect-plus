@@ -35,9 +35,10 @@ const PostAnnouncement = () => {
     if (!user) return;
 
     addAnnouncement({
-      posted_by: user.uid,
+      ownerId: user.uid,        // required by rules
       message: message.trim(),
       type,
+      createdAt: new Date(),    // recommended
     });
 
     toast({

@@ -1,16 +1,30 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProperty } from "@/contexts/PropertyContext";
+import { usePayments, Payment } from "@/hooks/usePayments";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BackButton from "@/components/BackButton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Receipt } from "lucide-react";
+import { DollarSign, Receipt, Loader2 } from "lucide-react";
 
 const Payments = () => {
   const { user } = useAuth();
-  const { getTenantPayments, getPropertyById } = useProperty();
-  const payments = user ? getTenantPayments(user.uid) : [];
+  const { getUserPayments, loading } = usePayments();
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPayments = async () => {
+      if (user) {
+        setIsLoading(true);
+        const data = await getUserPayments();
+        setPayments(data);
+        setIsLoading(false);
+      }
+    };
+    loadPayments();
+  }, [user]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -19,6 +33,26 @@ const Payments = () => {
       day: "numeric",
     });
   };
+
+  if (isLoading || loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 bg-gradient-to-b from-secondary/20 to-background">
+          <div className="container mx-auto px-4 py-8">
+            <BackButton />
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+                <p className="text-muted-foreground">Loading payments...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -37,48 +71,53 @@ const Payments = () => {
                 <Receipt className="h-16 w-16 text-muted-foreground mb-4" />
                 <h3 className="text-xl font-semibold mb-2">No payments yet</h3>
                 <p className="text-muted-foreground">Your payment history will appear here</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Complete a booking to see your payments
+                </p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
-              {payments.map((payment) => {
-                const booking = user?.uid;
-                return (
-                  <Card key={payment.id}>
-                    <CardContent className="flex items-center justify-between py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <DollarSign className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold">Payment #{payment.id.slice(-8)}</p>
-                          <p className="text-sm text-muted-foreground">{formatDate(payment.date)}</p>
-                          {payment.razorpay_payment_id && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Razorpay ID: {payment.razorpay_payment_id}
-                            </p>
-                          )}
-                        </div>
+              {payments.map((payment) => (
+                <Card key={payment.id}>
+                  <CardContent className="flex items-center justify-between py-6">
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <DollarSign className="h-6 w-6 text-primary" />
                       </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">${payment.amount}</p>
-                        <Badge
-                          variant={
-                            payment.status === "completed"
-                              ? "default"
-                              : payment.status === "pending"
-                              ? "secondary"
-                              : "destructive"
-                          }
-                          className="mt-2"
-                        >
-                          {payment.status}
-                        </Badge>
+                      <div>
+                        <p className="font-semibold">Payment #{payment.id.slice(-8).toUpperCase()}</p>
+                        <p className="text-sm text-muted-foreground">{formatDate(payment.date)}</p>
+                        {payment.bookingId && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Booking: {payment.bookingId.slice(-8).toUpperCase()}
+                          </p>
+                        )}
+                        {payment.razorpay_payment_id && (
+                          <p className="text-xs text-muted-foreground">
+                            Payment ID: {payment.razorpay_payment_id}
+                          </p>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-primary">${payment.amount}</p>
+                      <Badge
+                        variant={
+                          payment.status === "completed"
+                            ? "default"
+                            : payment.status === "pending"
+                            ? "secondary"
+                            : "destructive"
+                        }
+                        className="mt-2"
+                      >
+                        {payment.status}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
 
@@ -96,7 +135,7 @@ const Payments = () => {
                   <div className="text-center p-4 bg-secondary/50 rounded-lg">
                     <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
                     <p className="text-2xl font-bold text-primary">
-                      ${payments.reduce((sum, p) => sum + p.amount, 0)}
+                      ${payments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
                     </p>
                   </div>
                   <div className="text-center p-4 bg-secondary/50 rounded-lg">

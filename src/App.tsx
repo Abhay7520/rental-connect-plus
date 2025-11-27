@@ -41,6 +41,19 @@ import Events from "./pages/community/Events";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+import { useEffect } from "react";
+
+export function TestAPI() {
+  useEffect(() => {
+    fetch("/api/properties")     // goes to backend automatically
+      .then((res) => res.json())
+      .then((data) => console.log("Backend Response:", data))
+      .catch((err) => console.error(err));
+  }, []);
+
+  return <div>Check console for API response</div>;
+}
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -53,6 +66,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/test-api" element={<TestAPI />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
         <Route path="/create-user-role" element={<CreateUserRoles />} />
@@ -281,6 +295,8 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+                  
+
 
                 {/* 404 */}
                 <Route path="*" element={<NotFound />} />
