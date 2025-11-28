@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { BookingService, IssueService, PropertyService, PaymentService } from "@/services/firebaseService";
+import { BookingService, IssueService, PropertyService, PaymentService, AnnouncementService } from "@/services/apiService";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Types
@@ -75,26 +75,26 @@ interface PropertyContextType {
   addProperty: (data: any) => Promise<void>;
   updateProperty: (id: string, data: any) => Promise<void>;
   deleteProperty: (id: string) => Promise<void>;
-  
+
   // Bookings
   bookings: Booking[];
   createBooking: (data: any) => Promise<Booking>;
   updateBooking: (id: string, data: any) => Promise<void>;
   getTenantBookings: (tenantId: string) => Booking[];
   getOwnerBookings: (ownerId: string) => Booking[];
-  
+
   // Issues
   addIssue: (data: any) => Promise<void>;
   updateIssue: (id: string, data: any) => Promise<void>;
   getTenantIssues: (tenantId: string) => Issue[];
   getOwnerIssues: (ownerId: string) => Issue[];
-  
+
   // Payments
   payments: Payment[];
   addPayment: (data: any) => Promise<void>;
   getTenantPayments: (tenantId: string) => Payment[];
   getOwnerPayments: (ownerId: string) => Payment[];
-  
+
   // Announcements
   getAnnouncements: () => Announcement[];
   addAnnouncement: (data: any) => Promise<void>;
@@ -111,6 +111,14 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Helper to normalize property data from backend
+  const normalizeProperty = (p: any): Property => ({
+    ...p,
+    id: p._id || p.id,
+    rent_price: p.price || p.rent_price || 0, // Map backend 'price' to frontend 'rent_price'
+    owner_id: p.owner_id || p.ownerId,
+  });
+
   // ============ PROPERTIES ============
   const getPropertyById = (id: string) => {
     return properties.find(p => p.id === id);
@@ -126,18 +134,19 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addProperty = async (data: any) => {
     try {
-      // ✅ Map ownerId to owner_id for internal use
+      // ✅ Map frontend fields to backend fields
       const propertyData = {
         ...data,
-        ownerId: data.ownerId, // Firebase rules expect ownerId
-        owner_id: data.ownerId, // Internal state uses owner_id
+        price: data.rent_price, // Backend expects 'price'
+        owner_id: data.ownerId, // Backend expects 'owner_id'
         available: true,
         status: data.status || "active",
       };
-      
+
       console.log("🔵 Creating property with data:", propertyData);
       const newProperty = await PropertyService.create(propertyData);
-      setProperties([...properties, newProperty as Property]);
+      // Optimistic update (will be overwritten by poll/snapshot)
+      setProperties([...properties, normalizeProperty(newProperty)]);
       console.log("✅ Property added successfully");
     } catch (error) {
       console.error("❌ Error adding property:", error);
@@ -147,8 +156,12 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateProperty = async (id: string, data: any) => {
     try {
-      await PropertyService.update(id, data);
-      setProperties(properties.map(p => p.id === id ? { ...p, ...data } : p));
+      const updateData = { ...data };
+      if (updateData.rent_price) {
+        updateData.price = updateData.rent_price;
+      }
+      await PropertyService.update(id, updateData);
+      setProperties(properties.map(p => p.id === id ? { ...p, ...normalizeProperty(updateData) } : p));
     } catch (error) {
       console.error("Error updating property:", error);
       throw error;
@@ -172,10 +185,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const booking = await BookingService.create({
         tenant_id: data.tenant_id,
         property_id: data.property_id,
-        start_date: data.start_date,
-        end_date: data.end_date,
+        check_in: data.start_date,   // Map start_date -> check_in
+        check_out: data.end_date,    // Map end_date -> check_out
         status: "pending",
-        amount: data.amount || 0,
+        total_price: data.amount || 0, // Map amount -> total_price
       });
       setBookings([...bookings, booking as Booking]);
       console.log("✅ [PropertyContext] Booking created:", booking.id);
@@ -274,10 +287,10 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const ownerProperties = properties.filter(p => p.owner_id === ownerId);
       const propertyIds = ownerProperties.map(p => p.id);
-      
+
       const ownerBookings = bookings.filter(b => propertyIds.includes(b.property_id));
       const bookingIds = ownerBookings.map(b => b.id);
-      
+
       return payments.filter(p => bookingIds.includes(p.booking_id));
     } catch (error) {
       console.error("❌ [PropertyContext] Error getting owner payments:", error);
@@ -287,7 +300,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // ============ ANNOUNCEMENTS ============
   const getAnnouncements = (): Announcement[] => {
-    return announcements.sort((a, b) => 
+    return announcements.sort((a, b) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
   };
@@ -295,8 +308,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const addAnnouncement = async (data: any) => {
     try {
       const now = new Date().toISOString();
-      const newAnnouncement: Announcement = {
-        id: Date.now().toString(),
+      const newAnnouncement = {
         title: data.title || "",
         message: data.message,
         type: data.type || "general",
@@ -304,7 +316,7 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         created_at: now,
         date: now,
       };
-      setAnnouncements([...announcements, newAnnouncement]);
+      await AnnouncementService.create(newAnnouncement);
     } catch (error) {
       console.error("Error adding announcement:", error);
       throw error;
@@ -313,7 +325,6 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Load initial data with real-time sync - reload when user changes
   useEffect(() => {
-    // Clear data when no user (logged out)
     if (!user) {
       console.log("🔵 User logged out, clearing data...");
       setProperties([]);
@@ -325,53 +336,56 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
+    let unsubProperties: (() => void) | undefined;
+    let unsubBookings: (() => void) | undefined;
+    let unsubIssues: (() => void) | undefined;
+    let unsubPayments: (() => void) | undefined;
+    let unsubAnnouncements: (() => void) | undefined;
+
     const loadData = async () => {
       setLoading(true);
       try {
         console.log("🔵 Loading all data with real-time sync for user:", user.email);
-        
-        // Load properties with real-time listener
-        const allProps = await PropertyService.getAll();
-        setProperties(allProps as Property[]);
-        PropertyService.onSnapshot(
-          (data) => {
-            console.log("🔄 Properties synced:", data.length);
-            setProperties(data as Property[]);
-          },
+
+        // Initial fetch for loading state
+        const [allProps, allBookings, allIssues, allPayments, allAnnouncements] = await Promise.all([
+          PropertyService.getAll(),
+          BookingService.getAll(),
+          IssueService.getAll(),
+          PaymentService.getAll(),
+          AnnouncementService.getAll()
+        ]);
+
+        setProperties((allProps as any[]).map(normalizeProperty));
+        setBookings(allBookings as Booking[]);
+        setIssues(allIssues as Issue[]);
+        setPayments(allPayments as Payment[]);
+        setAnnouncements(allAnnouncements as Announcement[]);
+
+        // Setup real-time sync (polling)
+        unsubProperties = PropertyService.onSnapshot(
+          (data) => setProperties((data as any[]).map(normalizeProperty)),
           (error) => console.error("❌ Error loading properties:", error)
         );
 
-        // Load bookings with real-time listener
-        const allBookings = await BookingService.getAll();
-        setBookings(allBookings as Booking[]);
-        BookingService.onSnapshot(
-          (data) => {
-            console.log("🔄 Bookings synced:", data.length);
-            setBookings(data as Booking[]);
-          },
+        unsubBookings = BookingService.onSnapshot(
+          (data) => setBookings(data as Booking[]),
           (error) => console.error("❌ Error loading bookings:", error)
         );
 
-        // Load issues with real-time listener
-        const allIssues = await IssueService.getAll();
-        setIssues(allIssues as Issue[]);
-        IssueService.onSnapshot(
-          (data) => {
-            console.log("🔄 Issues synced:", data.length);
-            setIssues(data as Issue[]);
-          },
+        unsubIssues = IssueService.onSnapshot(
+          (data) => setIssues(data as Issue[]),
           (error) => console.error("❌ Error loading issues:", error)
         );
 
-        // Load payments with real-time listener
-        const allPayments = await PaymentService.getAll();
-        setPayments(allPayments as Payment[]);
-        PaymentService.onSnapshot(
-          (data) => {
-            console.log("🔄 Payments synced:", data.length);
-            setPayments(data as Payment[]);
-          },
+        unsubPayments = PaymentService.onSnapshot(
+          (data) => setPayments(data as Payment[]),
           (error) => console.error("❌ Error loading payments:", error)
+        );
+
+        unsubAnnouncements = AnnouncementService.onSnapshot(
+          (data) => setAnnouncements(data as Announcement[]),
+          (error) => console.error("❌ Error loading announcements:", error)
         );
 
         console.log("✅ All data loaded and synced");
@@ -383,7 +397,16 @@ export const PropertyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     loadData();
-  }, [user]); // Reload data when user changes (login/logout)
+
+    // Cleanup subscriptions
+    return () => {
+      if (unsubProperties) unsubProperties();
+      if (unsubBookings) unsubBookings();
+      if (unsubIssues) unsubIssues();
+      if (unsubPayments) unsubPayments();
+      if (unsubAnnouncements) unsubAnnouncements();
+    };
+  }, [user]);
 
   return (
     <PropertyContext.Provider

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { UserRolesService } from "@/services/firebaseService";
+import { UserRolesService } from "@/services/apiService";
 import Navbar from "@/components/Navbar";
 import BackButton from "@/components/BackButton";
 
@@ -29,12 +29,12 @@ const CreateUserRoles = () => {
     try {
       console.log("🔵 Creating role for user:", userId, role);
       await UserRolesService.create(userId, role);
-      
+
       toast({
         title: "Success!",
         description: `Role '${role}' created for user ${userId}`,
       });
-      
+
       setUserId("");
       setRole("tenant");
     } catch (error: any) {
@@ -64,16 +64,16 @@ const CreateUserRoles = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="userId">User ID (UID from Firebase Auth)</Label>
+                <Label htmlFor="userId">User ID</Label>
                 <Input
                   id="userId"
-                  placeholder="Enter Firebase Auth UID"
+                  placeholder="Enter User ID"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   disabled={loading}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Find the UID in Firebase Console → Authentication → Users
+                  Enter the User ID from the database
                 </p>
               </div>
 
@@ -98,10 +98,9 @@ const CreateUserRoles = () => {
               <div className="mt-6 p-4 bg-muted rounded-lg">
                 <h3 className="font-semibold mb-2">Quick Guide:</h3>
                 <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                  <li>Go to Firebase Console → Authentication → Users</li>
-                  <li>Find your user and copy their UID</li>
-                  <li>Paste the UID above and select the role</li>
-                  <li>Click "Create Role" and try logging in again</li>
+                  <li>Find the User ID in the database</li>
+                  <li>Paste the ID above and select the role</li>
+                  <li>Click "Create Role"</li>
                 </ol>
               </div>
             </CardContent>

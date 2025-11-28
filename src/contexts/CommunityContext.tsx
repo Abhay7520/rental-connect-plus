@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useAuth } from "./AuthContext";
+import { PollService, EventService } from "@/services/apiService";
 
 export interface Poll {
   id: string;
@@ -47,10 +48,10 @@ interface CommunityContextType {
   events: Event[];
   chatRooms: Record<string, ChatRoom>;
   addPoll: (poll: Omit<Poll, "id" | "createdBy" | "createdAt" | "voters">) => void;
-  votePoll: (pollId: string, optionIndex: number) => boolean;
+  votePoll: (pollId: string, optionIndex: number) => Promise<boolean>;
   addMessage: (message: Omit<ChatMessage, "id" | "sender_id" | "sender_name" | "sender_role" | "timestamp">) => void;
   addEvent: (event: Omit<Event, "id" | "createdBy" | "createdAt" | "rsvps">) => void;
-  rsvpEvent: (eventId: string, status: "yes" | "no") => void;
+  rsvpEvent: (eventId: string, status: "yes" | "no") => Promise<void>;
   getPolls: () => Poll[];
   getMessages: () => ChatMessage[];
   getEvents: () => Event[];
@@ -71,16 +72,24 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
 
   useEffect(() => {
-    const storedPolls = localStorage.getItem("renteazy_polls");
-    if (storedPolls) {
-      setPolls(JSON.parse(storedPolls));
-    }
-    
+    if (!user) return;
+
+    let unsubPolls: (() => void) | undefined;
+    let unsubEvents: (() => void) | undefined;
+
+    // Load Polls
+    PollService.getAll().then((data) => setPolls(data as Poll[]));
+    unsubPolls = PollService.onSnapshot((data) => setPolls(data as Poll[]));
+
+    // Load Events
+    EventService.getAll().then((data) => setEvents(data as Event[]));
+    unsubEvents = EventService.onSnapshot((data) => setEvents(data as Event[]));
+
+    // Load Chat (Local Storage for now)
     const storedMessages = localStorage.getItem("renteazy_messages");
     if (storedMessages) {
       setMessages(JSON.parse(storedMessages));
     } else {
-      // Initialize with some mock messages
       const mockMessages: ChatMessage[] = [
         {
           id: "msg_1",
@@ -94,66 +103,48 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
       setMessages(mockMessages);
       localStorage.setItem("renteazy_messages", JSON.stringify(mockMessages));
     }
-    
-    const storedEvents = localStorage.getItem("renteazy_events");
-    if (storedEvents) {
-      setEvents(JSON.parse(storedEvents));
-    }
 
     const storedRooms = localStorage.getItem("renteazy_chat_rooms");
     if (storedRooms) {
       setChatRooms(JSON.parse(storedRooms));
     }
-  }, []);
 
-  const addPoll = (poll: Omit<Poll, "id" | "createdBy" | "createdAt" | "voters">) => {
+    return () => {
+      if (unsubPolls) unsubPolls();
+      if (unsubEvents) unsubEvents();
+    };
+  }, [user]);
+
+  const addPoll = async (poll: Omit<Poll, "id" | "createdBy" | "createdAt" | "voters">) => {
     if (!user) return;
-    
-    const newPoll: Poll = {
+
+    const newPoll = {
       ...poll,
-      id: `poll_${Date.now()}`,
       createdBy: user.uid,
       createdAt: new Date().toISOString(),
       voters: [],
+      votes: new Array(poll.options.length).fill(0),
     };
 
-    const updated = [...polls, newPoll];
-    localStorage.setItem("renteazy_polls", JSON.stringify(updated));
-    setPolls(updated);
+    await PollService.create(newPoll);
+    // State updates via onSnapshot/getAll
   };
 
-  const votePoll = (pollId: string, optionIndex: number): boolean => {
+  const votePoll = async (pollId: string, optionIndex: number): Promise<boolean> => {
     if (!user) return false;
-    
-    const poll = polls.find(p => p.id === pollId);
-    if (!poll) return false;
-    
-    // Check if user has already voted
-    if (poll.voters.includes(user.uid)) {
+
+    try {
+      await PollService.vote(pollId, optionIndex, user.uid);
+      return true;
+    } catch (error) {
+      console.error("Error voting:", error);
       return false;
     }
-
-    const updated = polls.map(p => {
-      if (p.id === pollId) {
-        const newVotes = [...p.votes];
-        newVotes[optionIndex]++;
-        return {
-          ...p,
-          votes: newVotes,
-          voters: [...p.voters, user.uid],
-        };
-      }
-      return p;
-    });
-
-    localStorage.setItem("renteazy_polls", JSON.stringify(updated));
-    setPolls(updated);
-    return true;
   };
 
   const addMessage = (message: Omit<ChatMessage, "id" | "sender_id" | "sender_name" | "sender_role" | "timestamp">) => {
     if (!user) return;
-    
+
     const newMessage: ChatMessage = {
       ...message,
       id: `msg_${Date.now()}`,
@@ -168,59 +159,38 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
     setMessages(updated);
   };
 
-  const addEvent = (event: Omit<Event, "id" | "createdBy" | "createdAt" | "rsvps">) => {
+  const addEvent = async (event: Omit<Event, "id" | "createdBy" | "createdAt" | "rsvps">) => {
     if (!user) return;
-    
-    const newEvent: Event = {
+
+    const newEvent = {
       ...event,
-      id: `event_${Date.now()}`,
       createdBy: user.uid,
       createdAt: new Date().toISOString(),
       rsvps: [],
     };
 
-    const updated = [...events, newEvent];
-    localStorage.setItem("renteazy_events", JSON.stringify(updated));
-    setEvents(updated);
+    await EventService.create(newEvent);
   };
 
-  const rsvpEvent = (eventId: string, status: "yes" | "no") => {
+  const rsvpEvent = async (eventId: string, status: "yes" | "no") => {
     if (!user) return;
-
-    const updated = events.map(e => {
-      if (e.id === eventId) {
-        const existingRsvpIndex = e.rsvps.findIndex(r => r.user_id === user.uid);
-        let newRsvps = [...e.rsvps];
-        
-        if (existingRsvpIndex >= 0) {
-          newRsvps[existingRsvpIndex] = { user_id: user.uid, status };
-        } else {
-          newRsvps.push({ user_id: user.uid, status });
-        }
-        
-        return { ...e, rsvps: newRsvps };
-      }
-      return e;
-    });
-
-    localStorage.setItem("renteazy_events", JSON.stringify(updated));
-    setEvents(updated);
+    await EventService.rsvp(eventId, user.uid, status);
   };
 
   const getPolls = () => {
-    return [...polls].sort((a, b) => 
+    return [...polls].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   };
 
   const getMessages = () => {
-    return [...messages].sort((a, b) => 
+    return [...messages].sort((a, b) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
   };
 
   const getEvents = () => {
-    return [...events].sort((a, b) => 
+    return [...events].sort((a, b) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
   };
@@ -237,30 +207,29 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
 
   const createChatRoom = (): string => {
     if (!user) return "";
-    
+
     let code = generateRoomCode();
-    // Ensure unique code
     while (chatRooms[code]) {
       code = generateRoomCode();
     }
-    
+
     const newRoom: ChatRoom = {
       code,
       messages: [],
       members: [user.uid],
       createdAt: new Date().toISOString(),
     };
-    
+
     const updated = { ...chatRooms, [code]: newRoom };
     localStorage.setItem("renteazy_chat_rooms", JSON.stringify(updated));
     setChatRooms(updated);
-    
+
     return code;
   };
 
   const joinChatRoom = (code: string): boolean => {
     if (!user || !chatRooms[code]) return false;
-    
+
     const room = chatRooms[code];
     if (!room.members.includes(user.uid)) {
       const updated = {
@@ -273,13 +242,13 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem("renteazy_chat_rooms", JSON.stringify(updated));
       setChatRooms(updated);
     }
-    
+
     return true;
   };
 
   const leaveChatRoom = (code: string) => {
     if (!user || !chatRooms[code]) return;
-    
+
     const room = chatRooms[code];
     const updated = {
       ...chatRooms,
@@ -294,7 +263,7 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
 
   const addMessageToRoom = (roomCode: string, message: string) => {
     if (!user || !chatRooms[roomCode]) return;
-    
+
     const newMessage: ChatMessage = {
       id: `msg_${Date.now()}_${Math.random()}`,
       sender_id: user.uid,
@@ -303,7 +272,7 @@ export const CommunityProvider = ({ children }: { children: ReactNode }) => {
       message,
       timestamp: new Date().toISOString(),
     };
-    
+
     const room = chatRooms[roomCode];
     const updated = {
       ...chatRooms,

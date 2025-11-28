@@ -2,6 +2,7 @@
   "name": "renteazy-backend",
   "version": "1.0.0",
   "description": "Local backend for Renteazy",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -11,6 +12,8 @@
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.21.1"
+    "dotenv": "^17.2.3",
+    "express": "^4.21.1",
+    "mongoose": "^9.0.0"
   }
 }

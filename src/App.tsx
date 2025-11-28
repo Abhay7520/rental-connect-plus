@@ -30,7 +30,6 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import ManageUsers from "./pages/admin/ManageUsers";
 import AdminManageProperties from "./pages/admin/ManageProperties";
 import Reports from "./pages/admin/Reports";
-import MigrateRoles from "./pages/admin/MigrateRoles";
 import CreateUserRoles from "./pages/admin/CreateUserRoles";
 import Announcements from "./pages/Announcements";
 import PostAnnouncement from "./pages/owner/PostAnnouncement";
@@ -69,15 +68,15 @@ const App = () => (
                 <Route path="/test-api" element={<TestAPI />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
-        <Route path="/create-user-role" element={<CreateUserRoles />} />
-        <Route path="/migrate-roles" element={<MigrateRoles />} />
-                <Route 
-                  path="/chatbot" 
+                <Route path="/create-user-role" element={<CreateUserRoles />} />
+
+                <Route
+                  path="/chatbot"
                   element={
                     <ProtectedRoute>
                       <Chatbot />
                     </ProtectedRoute>
-                  } 
+                  }
                 />
 
                 {/* Tenant Routes */}
@@ -237,14 +236,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="/admin/migrate-roles"
-                  element={
-                    <ProtectedRoute allowedRoles={["admin"]}>
-                      <MigrateRoles />
-                    </ProtectedRoute>
-                  }
-                />
+
 
                 {/* Community Routes */}
                 <Route
@@ -295,7 +287,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
-                  
+
 
 
                 {/* 404 */}

@@ -25,6 +25,9 @@ const AddProperty = () => {
     rent_price: "",
     location: "",
     amenities: "",
+    type: "",
+    bedrooms: "",
+    bathrooms: "",
     status: "active" as const,
   });
 
@@ -52,10 +55,10 @@ const AddProperty = () => {
       return;
     }
 
-    if (!formData.title || !formData.rent_price || !formData.location) {
+    if (!formData.title || !formData.rent_price || !formData.location || !formData.type || !formData.bedrooms || !formData.bathrooms) {
       toast({
         title: "Missing fields",
-        description: "Please fill in all required fields (Title, Rent Price, Location)",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -68,6 +71,9 @@ const AddProperty = () => {
         description: formData.description,
         rent_price: parseFloat(formData.rent_price),
         location: formData.location,
+        type: formData.type,
+        bedrooms: parseInt(formData.bedrooms),
+        bathrooms: parseInt(formData.bathrooms),
         ownerId: user.uid, // ✅ Match Firebase rules field name
         amenities: formData.amenities.split(",").map((a) => a.trim()).filter(Boolean),
         images: images,
@@ -151,6 +157,44 @@ const AddProperty = () => {
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       placeholder="City, State"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Property Type *</Label>
+                    <Input
+                      id="type"
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                      placeholder="Apartment, House"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bedrooms">Bedrooms *</Label>
+                    <Input
+                      id="bedrooms"
+                      type="number"
+                      value={formData.bedrooms}
+                      onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })}
+                      placeholder="2"
+                      required
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bathrooms">Bathrooms *</Label>
+                    <Input
+                      id="bathrooms"
+                      type="number"
+                      value={formData.bathrooms}
+                      onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })}
+                      placeholder="1"
                       required
                       disabled={isSubmitting}
                     />

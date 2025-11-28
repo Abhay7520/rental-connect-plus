@@ -19,9 +19,9 @@ const BookingForm = () => {
   const { user } = useAuth();
   const { getPropertyById, createBooking, addPayment, updateBooking } = useProperty();
   const { toast } = useToast();
-  
+
   const property = id ? getPropertyById(id) : null;
-  
+
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -100,6 +100,7 @@ const BookingForm = () => {
       // Create payment record
       await addPayment({
         booking_id: booking.id,
+        property_id: property.id,
         tenant_id: user.uid,
         amount: total,
         status: "completed",

@@ -1,7 +1,6 @@
 // hooks/usePayments.ts
 import { useState } from 'react';
-import { collection, addDoc, query, where, getDocs, orderBy, Timestamp } from 'firebase/firestore';
-import { db } from "@/firebase/config";
+import { PaymentService } from "@/services/apiService";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -15,7 +14,7 @@ export interface Payment {
   date: string;
   razorpay_payment_id?: string;
   razorpay_order_id?: string;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
 export const usePayments = () => {
@@ -44,12 +43,12 @@ export const usePayments = () => {
         status: 'pending' as const,
         date: new Date().toISOString(),
         razorpay_order_id: paymentData.razorpay_order_id || '',
-        createdAt: Timestamp.now(),
+        createdAt: new Date().toISOString(),
       };
 
-      const docRef = await addDoc(collection(db, 'payments'), paymentDoc);
+      const newPayment = await PaymentService.create(paymentDoc);
       toast.success('Payment initiated successfully');
-      return { id: docRef.id, ...paymentDoc };
+      return { id: newPayment._id || newPayment.id, ...paymentDoc };
     } catch (error: any) {
       console.error('Error creating payment:', error);
       toast.error(error.message || 'Failed to create payment');
@@ -66,13 +65,10 @@ export const usePayments = () => {
     razorpay_payment_id?: string
   ) => {
     try {
-      const { doc, updateDoc } = await import('firebase/firestore');
-      const paymentRef = doc(db, 'payments', paymentId);
-      
-      await updateDoc(paymentRef, {
+      await PaymentService.update(paymentId, {
         status,
         razorpay_payment_id: razorpay_payment_id || '',
-        updatedAt: Timestamp.now(),
+        updatedAt: new Date().toISOString(),
       });
 
       toast.success(status === 'completed' ? 'Payment completed!' : 'Payment failed');
@@ -90,17 +86,8 @@ export const usePayments = () => {
 
     try {
       setLoading(true);
-      const q = query(
-        collection(db, 'payments'),
-        where('tenantId', '==', user.uid),
-        orderBy('createdAt', 'desc')
-      );
-
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Payment[];
+      const payments = await PaymentService.getByTenantId(user.uid);
+      return payments as Payment[];
     } catch (error: any) {
       console.error('Error fetching payments:', error);
       toast.error('Failed to load payments');
@@ -114,17 +101,8 @@ export const usePayments = () => {
   const getPropertyPayments = async (propertyId: string) => {
     try {
       setLoading(true);
-      const q = query(
-        collection(db, 'payments'),
-        where('propertyId', '==', propertyId),
-        orderBy('createdAt', 'desc')
-      );
-
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Payment[];
+      const payments = await PaymentService.getByPropertyId(propertyId);
+      return payments as Payment[];
     } catch (error: any) {
       console.error('Error fetching property payments:', error);
       return [];

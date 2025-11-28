@@ -53,7 +53,7 @@ const Polls = () => {
 
   const handleVote = (pollId: string, optionIndex: number) => {
     const success = votePoll(pollId, optionIndex);
-    
+
     if (success) {
       toast({
         title: "✅ Vote Recorded",
@@ -71,7 +71,7 @@ const Polls = () => {
   const getPollData = (poll: typeof allPolls[0]) => {
     const totalVotes = poll.votes.reduce((sum, v) => sum + v, 0);
     const maxVotes = Math.max(...poll.votes);
-    
+
     return poll.options.map((option, index) => ({
       name: option,
       votes: poll.votes[index],
@@ -85,7 +85,7 @@ const Polls = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         <BackButton />
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
@@ -98,7 +98,7 @@ const Polls = () => {
               Participate in community decisions and share your opinions
             </p>
           </div>
-          
+
           {isOwnerOrAdmin && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
@@ -114,7 +114,7 @@ const Polls = () => {
                     Ask a question and provide three options for the community to vote on
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4 mt-4">
                   <div>
                     <Label htmlFor="question">Question</Label>
@@ -125,7 +125,7 @@ const Polls = () => {
                       onChange={(e) => setQuestion(e.target.value)}
                     />
                   </div>
-                  
+
                   {options.map((option, index) => (
                     <div key={index}>
                       <Label htmlFor={`option-${index}`}>Option {index + 1}</Label>
@@ -141,7 +141,7 @@ const Polls = () => {
                       />
                     </div>
                   ))}
-                  
+
                   <Button onClick={handleCreatePoll} className="w-full">
                     Create Poll
                   </Button>
@@ -171,10 +171,12 @@ const Polls = () => {
             {allPolls.map((poll) => {
               const pollData = getPollData(poll);
               const totalVotes = poll.votes.reduce((sum, v) => sum + v, 0);
+              // Use _id or id
+              const pollId = (poll as any)._id || poll.id;
               const hasVoted = user ? poll.voters.includes(user.uid) : false;
 
               return (
-                <Card key={poll.id}>
+                <Card key={pollId}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -202,7 +204,7 @@ const Polls = () => {
                             key={index}
                             variant="outline"
                             className="w-full justify-start text-left h-auto py-4"
-                            onClick={() => handleVote(poll.id, index)}
+                            onClick={() => handleVote(pollId, index)}
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
@@ -220,7 +222,7 @@ const Polls = () => {
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
                             <YAxis />
-                            <Tooltip 
+                            <Tooltip
                               content={({ active, payload }) => {
                                 if (active && payload && payload.length) {
                                   return (
@@ -237,8 +239,8 @@ const Polls = () => {
                             />
                             <Bar dataKey="votes" radius={[8, 8, 0, 0]}>
                               {pollData.map((entry, index) => (
-                                <Cell 
-                                  key={`cell-${index}`} 
+                                <Cell
+                                  key={`cell-${index}`}
                                   fill={entry.isLeading ? 'hsl(var(--primary))' : COLORS[index % COLORS.length]}
                                   opacity={entry.isLeading ? 1 : 0.7}
                                 />
@@ -246,7 +248,7 @@ const Polls = () => {
                             </Bar>
                           </BarChart>
                         </ResponsiveContainer>
-                        
+
                         <div className="grid gap-2">
                           {pollData.map((data, index) => (
                             <div key={index} className="flex items-center justify-between text-sm">

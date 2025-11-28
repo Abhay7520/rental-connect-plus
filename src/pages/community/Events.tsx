@@ -58,18 +58,19 @@ const Events = () => {
 
   const handleRSVP = (eventId: string, status: "yes" | "no") => {
     rsvpEvent(eventId, status);
-    
+
     toast({
       title: status === "yes" ? "✅ RSVP Confirmed" : "RSVP Updated",
-      description: status === "yes" 
-        ? "We look forward to seeing you!" 
+      description: status === "yes"
+        ? "We look forward to seeing you!"
         : "Your response has been recorded",
     });
   };
 
   const getUserRSVP = (event: typeof allEvents[0]) => {
     if (!user) return null;
-    return event.rsvps.find(r => r.user_id === user.uid);
+    // Handle both _id and id, and user_id vs userId
+    return event.rsvps.find(r => r.user_id === user.uid || r.user_id === user.uid);
   };
 
   const getAttendeeCount = (event: typeof allEvents[0]) => {
@@ -96,7 +97,7 @@ const Events = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
-      
+
       <main className="flex-1 container mx-auto px-4 py-8">
         <BackButton />
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
@@ -109,7 +110,7 @@ const Events = () => {
               Join community events and connect with your neighbors
             </p>
           </div>
-          
+
           {isOwnerOrAdmin && (
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
@@ -125,7 +126,7 @@ const Events = () => {
                     Post a community event or meetup
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4 mt-4">
                   <div>
                     <Label htmlFor="title">Event Title *</Label>
@@ -136,7 +137,7 @@ const Events = () => {
                       onChange={(e) => setTitle(e.target.value)}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="description">Description *</Label>
                     <Textarea
@@ -147,7 +148,7 @@ const Events = () => {
                       rows={4}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="date">Event Date & Time *</Label>
                     <Input
@@ -157,7 +158,7 @@ const Events = () => {
                       onChange={(e) => setDate(e.target.value)}
                     />
                   </div>
-                  
+
                   <div>
                     <Label htmlFor="image">Image URL (optional)</Label>
                     <Input
@@ -170,7 +171,7 @@ const Events = () => {
                       Leave blank to use default image
                     </p>
                   </div>
-                  
+
                   <Button onClick={handleCreateEvent} className="w-full">
                     Create Event
                   </Button>
@@ -204,12 +205,14 @@ const Events = () => {
                   {upcomingEvents.map((event) => {
                     const userRsvp = getUserRSVP(event);
                     const attendeeCount = getAttendeeCount(event);
+                    // Use _id or id
+                    const eventId = (event as any)._id || event.id;
 
                     return (
-                      <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                      <Card key={eventId} className="overflow-hidden hover:shadow-lg transition-shadow">
                         <div className="aspect-video w-full overflow-hidden bg-muted">
-                          <img 
-                            src={event.image} 
+                          <img
+                            src={event.image}
                             alt={event.title}
                             className="w-full h-full object-cover"
                           />
@@ -232,24 +235,24 @@ const Events = () => {
                           <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                             {event.description}
                           </p>
-                          
+
                           <div className="flex gap-2">
                             {userRsvp?.status === "yes" ? (
                               <>
                                 <Button variant="default" className="flex-1" disabled>
                                   ✓ Going
                                 </Button>
-                                <Button 
-                                  variant="outline" 
-                                  onClick={() => handleRSVP(event.id, "no")}
+                                <Button
+                                  variant="outline"
+                                  onClick={() => handleRSVP(eventId, "no")}
                                 >
                                   Cancel
                                 </Button>
                               </>
                             ) : (
-                              <Button 
+                              <Button
                                 className="flex-1"
-                                onClick={() => handleRSVP(event.id, "yes")}
+                                onClick={() => handleRSVP(eventId, "yes")}
                               >
                                 RSVP
                               </Button>
@@ -269,12 +272,13 @@ const Events = () => {
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {pastEvents.map((event) => {
                     const attendeeCount = getAttendeeCount(event);
+                    const eventId = (event as any)._id || event.id;
 
                     return (
-                      <Card key={event.id} className="overflow-hidden opacity-75">
+                      <Card key={eventId} className="overflow-hidden opacity-75">
                         <div className="aspect-video w-full overflow-hidden bg-muted">
-                          <img 
-                            src={event.image} 
+                          <img
+                            src={event.image}
                             alt={event.title}
                             className="w-full h-full object-cover grayscale"
                           />
