@@ -4,6 +4,12 @@ import { PaymentService } from "@/services/apiService";
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export interface Payment {
   id: string;
   tenantId: string;
@@ -21,12 +27,11 @@ export const usePayments = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
-  // Create a new payment
+  // Create a new payment with Razorpay
   const createPayment = async (paymentData: {
     propertyId: string;
     bookingId?: string;
     amount: number;
-    razorpay_order_id?: string;
   }) => {
     if (!user) {
       toast.error('You must be logged in to create a payment');
@@ -35,30 +40,75 @@ export const usePayments = () => {
 
     try {
       setLoading(true);
-      const paymentDoc = {
-        tenantId: user.uid,
-        propertyId: paymentData.propertyId,
-        bookingId: paymentData.bookingId || '',
-        amount: paymentData.amount,
-        status: 'pending' as const,
-        date: new Date().toISOString(),
-        razorpay_order_id: paymentData.razorpay_order_id || '',
-        createdAt: new Date().toISOString(),
-      };
 
-      const newPayment = await PaymentService.create(paymentDoc);
-      toast.success('Payment initiated successfully');
-      return { id: newPayment._id || newPayment.id, ...paymentDoc };
+      // 1. Create Order
+      const order = await PaymentService.createOrder(paymentData.amount);
+
+      return new Promise((resolve, reject) => {
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Ensure this is set in .env
+          amount: order.amount,
+          currency: order.currency,
+          name: "RentEazy",
+          description: "Rent Payment",
+          order_id: order.id,
+          handler: async function (response: any) {
+            try {
+              // 2. Verify Payment
+              await PaymentService.verifyPayment({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+
+              // 3. Save Payment to DB
+              const paymentDoc = {
+                tenant_id: user.uid,
+                property_id: paymentData.propertyId,
+                booking_id: paymentData.bookingId || '',
+                amount: paymentData.amount,
+                status: 'completed',
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                date: new Date().toISOString(),
+              };
+
+              const newPayment = await PaymentService.create(paymentDoc);
+              toast.success('Payment successful!');
+              resolve(newPayment);
+            } catch (err) {
+              console.error("Payment verification failed", err);
+              toast.error("Payment verification failed");
+              reject(err);
+            }
+          },
+          prefill: {
+            name: user.displayName || "User",
+            email: user.email,
+          },
+          theme: {
+            color: "#3399cc",
+          },
+        };
+
+        const rzp1 = new window.Razorpay(options);
+        rzp1.on("payment.failed", function (response: any) {
+          toast.error(response.error.description);
+          reject(response.error);
+        });
+        rzp1.open();
+      });
+
     } catch (error: any) {
-      console.error('Error creating payment:', error);
-      toast.error(error.message || 'Failed to create payment');
+      console.error('Error initiating payment:', error);
+      toast.error(error.message || 'Failed to initiate payment');
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  // Update payment status after Razorpay confirmation
+  // Update payment status (fallback/manual)
   const updatePaymentStatus = async (
     paymentId: string,
     status: 'completed' | 'failed',

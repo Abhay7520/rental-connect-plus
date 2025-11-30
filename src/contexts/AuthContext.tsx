@@ -103,7 +103,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       localStorage.setItem("renteazy_user", JSON.stringify(newUser));
       setUser(newUser);
-      // loadAllUsers(); // Removed as onSnapshot handles sync
     } catch (error: any) {
       console.error("Signup error:", error);
       throw new Error(error.message || "Signup failed");
@@ -118,10 +117,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const uid = rawUser._id || rawUser.id;
 
       // Fetch role
-      const roleData = await UserRolesService.getRole(uid);
+      let roleData = await UserRolesService.getRole(uid);
 
+      // If role is missing, auto-create it as 'tenant' (migration fallback)
       if (!roleData?.role) {
-        throw new Error("User role not found. Please contact administrator.");
+        console.warn("⚠️ User role missing, auto-creating as 'tenant' for:", uid);
+        await UserRolesService.create(uid, "tenant");
+        roleData = { role: "tenant" };
       }
 
       const userRole = roleData.role as User["role"];

@@ -336,6 +336,30 @@ export const IssueService = {
 
 // ============ PAYMENT SERVICE ============
 export const PaymentService = {
+  async createOrder(amount: number, currency: string = "INR") {
+    try {
+      return await fetchJson(`${API_BASE}/payments/create-order`, {
+        method: "POST",
+        body: JSON.stringify({ amount, currency }),
+      });
+    } catch (error) {
+      console.error("❌ [PaymentService] CreateOrder error:", error);
+      throw error;
+    }
+  },
+
+  async verifyPayment(data: any) {
+    try {
+      return await fetchJson(`${API_BASE}/payments/verify-payment`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    } catch (error) {
+      console.error("❌ [PaymentService] VerifyPayment error:", error);
+      throw error;
+    }
+  },
+
   async create(data: any) {
     try {
       return await fetchJson(`${API_BASE}/payments`, {
